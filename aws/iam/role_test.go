@@ -133,8 +133,7 @@ func TestRoleInstance_Update(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, rolIns.IsCreated())
 
-	rolIns, err = NewExistingRoleInstance(mockSvc, getReferenceRoleExistingArn())
-	assert.NoError(t, err)
+	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd, getReferenceRoleExistingArn())
 	err = rolIns.Update(mockSvc)
 	assert.NoError(t, err)
 }
@@ -151,8 +150,7 @@ func TestRoleInstance_Delete(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, rolIns.IsCreated())
 
-	rolIns, err = NewExistingRoleInstance(mockSvc, getReferenceRoleExistingArn())
-	assert.NoError(t, err)
+	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd, getReferenceRoleExistingArn())
 	err = rolIns.Delete(mockSvc)
 	assert.NoError(t, err)
 }
@@ -163,18 +161,7 @@ func TestNewRoleInstance(t *testing.T) {
 }
 
 func TestNewExistingRoleInstance(t *testing.T) {
-	// Setup Test
-	mockSvc := &mockIAMClient{t: t}
-
-	ri, err := NewExistingRoleInstance(mockSvc, getReferenceRoleNonExistingArn())
-	assert.Error(t, err)
-	assert.True(t, err.(awserr.Error).Code() == awsiam.ErrCodeNoSuchEntityException)
-
-	ri, err = NewExistingRoleInstance(mockSvc, awsarn.ARN{})
-	assert.Error(t, err)
-
-	ri, err = NewExistingRoleInstance(mockSvc, getReferenceRoleExistingArn())
-	assert.NoError(t, err)
+	ri := NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, getReferencePolicyDocument(), getReferenceRoleExistingArn())
 	riWithArn := getReferenceRoleInstance()
 	riWithArn.arn = getReferenceRoleExistingArn()
 	assert.Equal(t, riWithArn, ri)

@@ -103,33 +103,42 @@ func NewPolicyInstance(name, description string, policyDoc PolicyDocument) *Poli
 	return &PolicyInstance{Name: name, Description: description, PolicyDocument: policyDoc}
 }
 
-func NewExistingPolicyInstance(svc iamiface.IAMAPI, arn awsarn.ARN) (*PolicyInstance, error) {
-	var pi *PolicyInstance
-	emptyarn := awsarn.ARN{}.String()
-	if arn.String() == emptyarn {
-		return pi, fmt.Errorf("given ARN is empty")
-	}
-
-	out, err := getPolicy(svc, arn)
-	if err != nil {
-		return pi, err
-	}
-
-	pdout, err := getPolicyVersion(svc, *out)
-	if err != nil {
-		return pi, err
-	}
-	var pd PolicyDocument
-	json.Unmarshal([]byte(awssdk.StringValue(pdout.PolicyVersion.Document)), &pd)
-	pi = &PolicyInstance{
-		Name:           awssdk.StringValue(out.Policy.PolicyName),
-		Description:    awssdk.StringValue(out.Policy.Description),
-		PolicyDocument: pd,
+func NewExistingPolicyInstance(name, description string, policyDoc PolicyDocument, arn awsarn.ARN) *PolicyInstance {
+	return &PolicyInstance{
+		Name:           name,
+		Description:    description,
+		PolicyDocument: policyDoc,
 		arn:            arn,
 	}
-
-	return pi, nil
 }
+
+
+// Abandoned fetch implementation
+//func NewExistingPolicyInstance(svc iamiface.IAMAPI, arn awsarn.ARN) (*PolicyInstance, error) {
+//	var pi *PolicyInstance
+//	emptyarn := awsarn.ARN{}.String()
+//	if arn.String() == emptyarn {
+//		return pi, fmt.Errorf("given ARN is empty")
+//	}
+//
+//	out, err := getPolicy(svc, arn)
+//	if err != nil {
+//		return pi, err
+//	}
+//
+//	pdout, err := getPolicyVersion(svc, *out)
+//	if err != nil {
+//		return pi, err
+//	}
+//	var pd PolicyDocument
+//	json.Unmarshal([]byte(awssdk.StringValue(pdout.PolicyVersion.Document)), &pd)
+//	pi = &PolicyInstance{
+//		Name:           awssdk.StringValue(out.Policy.PolicyName),
+//		Description:    awssdk.StringValue(out.Policy.Description),
+//		PolicyDocument: pd,
+//		arn:            arn,
+//	}
+//}
 
 //  Create attaches the referenced policy on referenced target type and returns the target ARN
 func (p *PolicyInstance) Create(svc iamiface.IAMAPI) error {

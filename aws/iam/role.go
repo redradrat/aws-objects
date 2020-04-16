@@ -3,7 +3,6 @@ package iam
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
@@ -85,35 +84,45 @@ func NewRoleInstance(name string, description string, poldoc PolicyDocument) *Ro
 	return &RoleInstance{Name: name, Description: description, PolicyDocument: poldoc}
 }
 
-func NewExistingRoleInstance(svc iamiface.IAMAPI, arn awsarn.ARN) (*RoleInstance, error) {
-	var ri *RoleInstance
-	emptyarn := awsarn.ARN{}.String()
-	if arn.String() == emptyarn {
-		return ri, fmt.Errorf("given ARN is empty")
-	}
-
-	out, err := getRole(svc, arn)
-	if err != nil {
-		return ri, err
-	}
-
-	var pd PolicyDocument
-	policyJson, err := url.QueryUnescape(awssdk.StringValue(out.Role.AssumeRolePolicyDocument))
-	if err != nil {
-		return ri, err
-	}
-	if err = json.Unmarshal([]byte(policyJson), &pd); err != nil {
-		return ri, err
-	}
-	ri = &RoleInstance{
-		Name:           awssdk.StringValue(out.Role.RoleName),
-		Description:    awssdk.StringValue(out.Role.Description),
-		PolicyDocument: pd,
+func NewExistingRoleInstance(name string, description string, poldoc PolicyDocument, arn awsarn.ARN) *RoleInstance {
+	return &RoleInstance{
+		Name:           name,
+		Description:    description,
+		PolicyDocument: poldoc,
 		arn:            arn,
 	}
-
-	return ri, nil
 }
+
+// An old fetch implementation; abandoned due to sync problems
+//func NewExistingRoleInstance(svc iamiface.IAMAPI, arn awsarn.ARN) (*RoleInstance, error) {
+//	var ri *RoleInstance
+//	emptyarn := awsarn.ARN{}.String()
+//	if arn.String() == emptyarn {
+//		return ri, fmt.Errorf("given ARN is empty")
+//	}
+//
+//	out, err := getRole(svc, arn)
+//	if err != nil {
+//		return ri, err
+//	}
+//
+//	var pd PolicyDocument
+//	policyJson, err := url.QueryUnescape(awssdk.StringValue(out.Role.AssumeRolePolicyDocument))
+//	if err != nil {
+//		return ri, err
+//	}
+//	if err = json.Unmarshal([]byte(policyJson), &pd); err != nil {
+//		return ri, err
+//	}
+//	ri = &RoleInstance{
+//		Name:           awssdk.StringValue(out.Role.RoleName),
+//		Description:    awssdk.StringValue(out.Role.Description),
+//		PolicyDocument: pd,
+//		arn:            arn,
+//	}
+//
+//	return ri, nil
+//}
 
 // Reconcile creates or updates an AWS Role
 func (r *RoleInstance) Create(svc iamiface.IAMAPI) error {

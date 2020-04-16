@@ -160,8 +160,7 @@ func TestPolicyInstance_Update(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, polIns.IsCreated())
 
-	polIns, err = NewExistingPolicyInstance(mockSvc, getReferencePolicyExistingArn())
-	assert.NoError(t, err)
+	polIns = NewExistingPolicyInstance(ReferencePolicyName, ReferencePolicyDescription, pd, getReferencePolicyExistingArn())
 	err = polIns.Update(mockSvc)
 	assert.NoError(t, err)
 }
@@ -178,8 +177,7 @@ func TestPolicyInstance_Delete(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, polIns.IsCreated())
 
-	polIns, err = NewExistingPolicyInstance(mockSvc, getReferencePolicyExistingArn())
-	assert.NoError(t, err)
+	polIns = NewExistingPolicyInstance(ReferencePolicyName, ReferencePolicyDescription, pd, getReferencePolicyExistingArn())
 	err = polIns.Delete(mockSvc)
 	assert.NoError(t, err)
 }
@@ -190,18 +188,7 @@ func TestNewPolicyInstance(t *testing.T) {
 }
 
 func TestNewPolicyInstanceFromExisting(t *testing.T) {
-	// Setup Test
-	mockSvc := &mockIAMClient{t: t}
-
-	pi, err := NewExistingPolicyInstance(mockSvc, getReferencePolicyNonExistingArn())
-	assert.Error(t, err)
-	assert.True(t, err.(awserr.Error).Code() == awsiam.ErrCodeNoSuchEntityException)
-
-	pi, err = NewExistingPolicyInstance(mockSvc, awsarn.ARN{})
-	assert.Error(t, err)
-
-	pi, err = NewExistingPolicyInstance(mockSvc, getReferencePolicyExistingArn())
-	assert.NoError(t, err)
+	pi := NewExistingPolicyInstance(ReferencePolicyName, ReferencePolicyDescription, getReferencePolicyDocument(), getReferencePolicyExistingArn())
 	piWithArn := getReferencePolicyInstance()
 	piWithArn.arn = getReferencePolicyExistingArn()
 	assert.Equal(t, piWithArn, pi)
