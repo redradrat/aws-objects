@@ -1,6 +1,9 @@
 package iam
 
 import (
+	"strings"
+
+	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
@@ -12,6 +15,11 @@ type PolicyVersion string
 type PolicyDocument struct {
 	Version   PolicyVersion    `json:"Version,omitempty"`
 	Statement []StatementEntry `json:"Statement,omitempty"`
+}
+
+func FriendlyNamefromARN(arn awsarn.ARN) string {
+	splitres := strings.Split(arn.Resource, "/")
+	return splitres[len(splitres)-1]
 }
 
 type StatementEntry struct {

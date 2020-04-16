@@ -3,7 +3,6 @@ package iam
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
@@ -69,11 +68,6 @@ func getRole(svc iamiface.IAMAPI, roleArn awsarn.ARN) (*awsiam.GetRoleOutput, er
 	}
 
 	return result, nil
-}
-
-func FriendlyNamefromARN(arn awsarn.ARN) string {
-	splitres := strings.Split(arn.Resource, "/")
-	return splitres[len(splitres)-1]
 }
 
 type RoleInstance struct {
