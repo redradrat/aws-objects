@@ -6,6 +6,7 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
@@ -53,7 +54,9 @@ func deletePolicy(svc iamiface.IAMAPI, arn awsarn.ARN) (*iam.DeletePolicyOutput,
 		PolicyArn: awssdk.String(arn.String()),
 	})
 	if err != nil {
-		return nil, err
+		if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
+			return nil, err
+		}
 	}
 
 	return res, nil
@@ -156,7 +159,7 @@ func (p *PolicyInstance) Update(svc iamiface.IAMAPI) error {
 	return nil
 }
 
-// Delete removes the referenced Policy from referenced target type and returns the target ARN
+// Delete removes the referenced Policy from referenced target type
 func (p *PolicyInstance) Delete(svc iamiface.IAMAPI) error {
 	if !p.IsCreated() {
 		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("Policy '%s' not yet created", p.Name))

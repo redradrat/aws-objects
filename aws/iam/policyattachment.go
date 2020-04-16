@@ -5,6 +5,7 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
@@ -52,7 +53,9 @@ func deletePolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, poli
 		return aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
 	}
 	if err != nil {
-		return err
+		if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
+			return err
+		}
 	}
 
 	return nil

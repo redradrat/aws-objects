@@ -6,6 +6,7 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	awsiam "github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
@@ -50,7 +51,9 @@ func deleteRole(svc iamiface.IAMAPI, roleArn awsarn.ARN) (*awsiam.DeleteRoleOutp
 		RoleName: awssdk.String(FriendlyNamefromARN(roleArn)),
 	})
 	if err != nil {
-		return nil, err
+		if err.(awserr.Error).Code() != awsiam.ErrCodeNoSuchEntityException {
+			return nil, err
+		}
 	}
 
 	return res, nil
