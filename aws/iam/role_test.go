@@ -11,7 +11,7 @@ import (
 	awsiam "github.com/aws/aws-sdk-go/service/iam"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/redradrat/aws-objects/aws"
+	"github.com/redradrat/cloud-objects/aws"
 )
 
 ///////////////

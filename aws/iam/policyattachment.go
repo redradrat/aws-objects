@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
-	"github.com/redradrat/aws-objects/aws"
+	"github.com/redradrat/cloud-objects/aws"
 )
 
 func createPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, policyArn, targetArn awsarn.ARN) error {

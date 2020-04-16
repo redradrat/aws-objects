@@ -10,7 +10,7 @@ import (
 	awsiam "github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
-	"github.com/redradrat/aws-objects/aws"
+	"github.com/redradrat/cloud-objects/aws"
 )
 
 func createRole(svc iamiface.IAMAPI, rn string, roleDesc string, pd PolicyDocument) (*awsiam.CreateRoleOutput, error) {

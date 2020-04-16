@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 
-	"github.com/redradrat/aws-objects/aws"
+	"github.com/redradrat/cloud-objects/aws"
 )
 
 func createPolicy(svc iamiface.IAMAPI, polName, polDesc string, pd PolicyDocument) (*iam.CreatePolicyOutput, error) {

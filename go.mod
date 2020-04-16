@@ -1,4 +1,4 @@
-module github.com/redradrat/aws-objects
+module github.com/redradrat/cloud-objects
 
 go 1.14
 
