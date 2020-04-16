@@ -3,6 +3,7 @@ package iam
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
@@ -97,7 +98,13 @@ func NewExistingRoleInstance(svc iamiface.IAMAPI, arn awsarn.ARN) (*RoleInstance
 	}
 
 	var pd PolicyDocument
-	json.Unmarshal([]byte(awssdk.StringValue(out.Role.AssumeRolePolicyDocument)), &pd)
+	policyJson, err := url.QueryUnescape(awssdk.StringValue(out.Role.AssumeRolePolicyDocument))
+	if err != nil {
+		return ri, err
+	}
+	if err = json.Unmarshal([]byte(policyJson), &pd); err != nil {
+		return ri, err
+	}
 	ri = &RoleInstance{
 		Name:           awssdk.StringValue(out.Role.RoleName),
 		Description:    awssdk.StringValue(out.Role.Description),
