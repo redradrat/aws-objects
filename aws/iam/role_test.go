@@ -114,7 +114,7 @@ func TestRoleInstance_Create(t *testing.T) {
 	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd)
 	err := rolIns.Create(mockSvc)
 	assert.NoError(t, err)
-	assert.True(t, rolIns.IsCreated())
+	assert.True(t, rolIns.IsCreated(mockSvc))
 
 	rolIns = NewRoleInstance(ReferenceExistingRoleName, ReferenceRoleDescription, pd)
 	err = rolIns.Create(mockSvc)
@@ -131,7 +131,7 @@ func TestRoleInstance_Update(t *testing.T) {
 	err := rolIns.Update(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
-	assert.False(t, rolIns.IsCreated())
+	assert.False(t, rolIns.IsCreated(mockSvc))
 
 	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd, getReferenceRoleExistingArn())
 	err = rolIns.Update(mockSvc)
@@ -148,7 +148,7 @@ func TestRoleInstance_Delete(t *testing.T) {
 	err := rolIns.Delete(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
-	assert.False(t, rolIns.IsCreated())
+	assert.False(t, rolIns.IsCreated(mockSvc))
 
 	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd, getReferenceRoleExistingArn())
 	err = rolIns.Delete(mockSvc)

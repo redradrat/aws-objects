@@ -12,7 +12,7 @@ type Instance interface {
 	Update(svc iamiface.IAMAPI) error
 	Delete(svc iamiface.IAMAPI) error
 	ARN() awsarn.ARN
-	IsCreated() bool
+	IsCreated(svc iamiface.IAMAPI) bool
 }
 
 // ARNify turns a list of string inputs into a list of parsed ARNs

@@ -112,7 +112,6 @@ func NewExistingPolicyInstance(name, description string, policyDoc PolicyDocumen
 	}
 }
 
-
 // Abandoned fetch implementation
 //func NewExistingPolicyInstance(svc iamiface.IAMAPI, arn awsarn.ARN) (*PolicyInstance, error) {
 //	var pi *PolicyInstance
@@ -157,7 +156,7 @@ func (p *PolicyInstance) Create(svc iamiface.IAMAPI) error {
 
 // Update for PolicyInstance creates a new Policy version an sets it as active; then returns the arn
 func (p *PolicyInstance) Update(svc iamiface.IAMAPI) error {
-	if !p.IsCreated() {
+	if !p.IsCreated(svc) {
 		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("Policy '%s' not yet created", p.Name))
 	}
 
@@ -170,7 +169,7 @@ func (p *PolicyInstance) Update(svc iamiface.IAMAPI) error {
 
 // Delete removes the referenced Policy from referenced target type
 func (p *PolicyInstance) Delete(svc iamiface.IAMAPI) error {
-	if !p.IsCreated() {
+	if !p.IsCreated(svc) {
 		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("Policy '%s' not yet created", p.Name))
 	}
 
@@ -185,6 +184,6 @@ func (p *PolicyInstance) ARN() awsarn.ARN {
 	return p.arn
 }
 
-func (p *PolicyInstance) IsCreated() bool {
+func (p *PolicyInstance) IsCreated(svc iamiface.IAMAPI) bool {
 	return p.arn.String() != awsarn.ARN{}.String()
 }

@@ -145,7 +145,7 @@ func TestPolicyInstance_Create(t *testing.T) {
 	polIns := NewPolicyInstance(ReferencePolicyName, ReferencePolicyDescription, pd)
 	err := polIns.Create(mockSvc)
 	assert.NoError(t, err)
-	assert.True(t, polIns.IsCreated())
+	assert.True(t, polIns.IsCreated(mockSvc))
 }
 
 func TestPolicyInstance_Update(t *testing.T) {
@@ -158,7 +158,7 @@ func TestPolicyInstance_Update(t *testing.T) {
 	err := polIns.Update(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
-	assert.False(t, polIns.IsCreated())
+	assert.False(t, polIns.IsCreated(mockSvc))
 
 	polIns = NewExistingPolicyInstance(ReferencePolicyName, ReferencePolicyDescription, pd, getReferencePolicyExistingArn())
 	err = polIns.Update(mockSvc)
@@ -175,7 +175,7 @@ func TestPolicyInstance_Delete(t *testing.T) {
 	err := polIns.Delete(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
-	assert.False(t, polIns.IsCreated())
+	assert.False(t, polIns.IsCreated(mockSvc))
 
 	polIns = NewExistingPolicyInstance(ReferencePolicyName, ReferencePolicyDescription, pd, getReferencePolicyExistingArn())
 	err = polIns.Delete(mockSvc)

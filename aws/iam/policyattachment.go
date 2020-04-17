@@ -60,6 +60,31 @@ func deletePolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, poli
 
 	return nil
 }
+func getPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, policyArn, targetArn awsarn.ARN) error {
+	var err error
+
+	switch attachType {
+	case RoleAttachmentType:
+		_, err = svc.GetRolePolicy(&iam.GetRolePolicyInput{
+			PolicyName: awssdk.String(FriendlyNamefromARN(policyArn)),
+			RoleName:   awssdk.String(FriendlyNamefromARN(targetArn)),
+		})
+	case UserAttachmentType:
+		_, err = svc.GetUserPolicy(&iam.GetUserPolicyInput{
+			PolicyName: awssdk.String(FriendlyNamefromARN(policyArn)),
+			UserName:   awssdk.String(FriendlyNamefromARN(targetArn)),
+		})
+	default:
+		return aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
+	}
+	if err != nil {
+		if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
+			return err
+		}
+	}
+
+	return nil
+}
 
 const (
 	RoleAttachmentType       AttachmentType = "role"
@@ -73,7 +98,6 @@ type PolicyAttachmentInstance struct {
 	PolicyRef awsarn.ARN
 	Type      AttachmentType
 	TargetRef awsarn.ARN
-	created   bool
 }
 
 func NewPolicyAttachmentInstance(policyRef awsarn.ARN, attType AttachmentType, ref awsarn.ARN) *PolicyAttachmentInstance {
@@ -85,7 +109,6 @@ func (pa *PolicyAttachmentInstance) Create(svc iamiface.IAMAPI) error {
 	if err := createPolicyAttachment(svc, pa.Type, pa.PolicyRef, pa.TargetRef); err != nil {
 		return err
 	}
-	pa.created = true
 	return nil
 }
 
@@ -97,7 +120,7 @@ func (pa *PolicyAttachmentInstance) Update(svc iamiface.IAMAPI) error {
 
 // Delete removes the referenced Policy from referenced target type
 func (pa *PolicyAttachmentInstance) Delete(svc iamiface.IAMAPI) error {
-	if !pa.IsCreated() {
+	if !pa.IsCreated(svc) {
 		return aws.NewInstanceNotYetCreatedError("PolicyAttachment not yet created")
 	}
 
@@ -113,6 +136,7 @@ func (pa *PolicyAttachmentInstance) ARN() awsarn.ARN {
 	return pa.TargetRef
 }
 
-func (pa *PolicyAttachmentInstance) IsCreated() bool {
-	return pa.created
+func (pa *PolicyAttachmentInstance) IsCreated(svc iamiface.IAMAPI) bool {
+	err := getPolicyAttachment(svc, pa.Type, pa.PolicyRef, pa.TargetRef)
+	return err == nil
 }

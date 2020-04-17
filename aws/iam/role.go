@@ -140,7 +140,7 @@ func (r *RoleInstance) Create(svc iamiface.IAMAPI) error {
 }
 
 func (r *RoleInstance) Update(svc iamiface.IAMAPI) error {
-	if !r.IsCreated() {
+	if !r.IsCreated(svc) {
 		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("Role '%s' not yet created", r.Name))
 	}
 
@@ -152,7 +152,7 @@ func (r *RoleInstance) Update(svc iamiface.IAMAPI) error {
 }
 
 func (r *RoleInstance) Delete(svc iamiface.IAMAPI) error {
-	if !r.IsCreated() {
+	if !r.IsCreated(svc) {
 		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("Role '%s' not yet created", r.Name))
 	}
 
@@ -167,6 +167,6 @@ func (r *RoleInstance) ARN() awsarn.ARN {
 	return r.arn
 }
 
-func (r *RoleInstance) IsCreated() bool {
+func (r *RoleInstance) IsCreated(svc iamiface.IAMAPI) bool {
 	return r.arn.String() != awsarn.ARN{}.String()
 }
