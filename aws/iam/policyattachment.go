@@ -60,30 +60,41 @@ func deletePolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, poli
 
 	return nil
 }
-func getPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, policyArn, targetArn awsarn.ARN) error {
-	var err error
+func getPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, policyArn, targetArn awsarn.ARN) (*iam.AttachedPolicy, error) {
+	var aps []*iam.AttachedPolicy
 
 	switch attachType {
 	case RoleAttachmentType:
-		_, err = svc.GetRolePolicy(&iam.GetRolePolicyInput{
-			PolicyName: awssdk.String(FriendlyNamefromARN(policyArn)),
-			RoleName:   awssdk.String(FriendlyNamefromARN(targetArn)),
+		out, err := svc.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
+			RoleName: awssdk.String(FriendlyNamefromARN(targetArn)),
 		})
+		if err != nil {
+			if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
+				return nil, err
+			}
+		}
+		aps = out.AttachedPolicies
 	case UserAttachmentType:
-		_, err = svc.GetUserPolicy(&iam.GetUserPolicyInput{
-			PolicyName: awssdk.String(FriendlyNamefromARN(policyArn)),
-			UserName:   awssdk.String(FriendlyNamefromARN(targetArn)),
+		out, err := svc.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+			UserName: awssdk.String(FriendlyNamefromARN(targetArn)),
 		})
+		if err != nil {
+			if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
+				return nil, err
+			}
+		}
+		aps = out.AttachedPolicies
 	default:
-		return aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
+		return nil, aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
 	}
-	if err != nil {
-		if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
-			return err
+
+	for _, policy := range aps {
+		if *policy.PolicyName == FriendlyNamefromARN(policyArn) {
+			return policy, nil
 		}
 	}
 
-	return nil
+	return nil, fmt.Errorf("policy not attached to specified target")
 }
 
 const (
@@ -137,6 +148,6 @@ func (pa *PolicyAttachmentInstance) ARN() awsarn.ARN {
 }
 
 func (pa *PolicyAttachmentInstance) IsCreated(svc iamiface.IAMAPI) bool {
-	err := getPolicyAttachment(svc, pa.Type, pa.PolicyRef, pa.TargetRef)
+	_, err := getPolicyAttachment(svc, pa.Type, pa.PolicyRef, pa.TargetRef)
 	return err == nil
 }
