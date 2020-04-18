@@ -25,6 +25,11 @@ func createPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, poli
 			PolicyArn: awssdk.String(policyArn.String()),
 			UserName:  awssdk.String(FriendlyNamefromARN(targetArn)),
 		})
+	case GroupAttachmentType:
+		_, err = svc.AttachGroupPolicy(&iam.AttachGroupPolicyInput{
+			PolicyArn: awssdk.String(policyArn.String()),
+			GroupName: awssdk.String(FriendlyNamefromARN(targetArn)),
+		})
 	default:
 		return aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
 	}
@@ -48,6 +53,11 @@ func deletePolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, poli
 		_, err = svc.DetachUserPolicy(&iam.DetachUserPolicyInput{
 			PolicyArn: awssdk.String(policyArn.String()),
 			UserName:  awssdk.String(FriendlyNamefromARN(targetArn)),
+		})
+	case GroupAttachmentType:
+		_, err = svc.DetachGroupPolicy(&iam.DetachGroupPolicyInput{
+			PolicyArn: awssdk.String(policyArn.String()),
+			GroupName: awssdk.String(FriendlyNamefromARN(targetArn)),
 		})
 	default:
 		return aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
@@ -84,6 +94,16 @@ func getPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, policyA
 			}
 		}
 		aps = out.AttachedPolicies
+	case GroupAttachmentType:
+		out, err := svc.ListAttachedGroupPolicies(&iam.ListAttachedGroupPoliciesInput{
+			GroupName: awssdk.String(FriendlyNamefromARN(targetArn)),
+		})
+		if err != nil {
+			if err.(awserr.Error).Code() != iam.ErrCodeNoSuchEntityException {
+				return nil, err
+			}
+		}
+		aps = out.AttachedPolicies
 	default:
 		return nil, aws.NewInstanceError(ErrAttachmentTypeUnknown, fmt.Sprintf("unknown attachment type '%s", attachType))
 	}
@@ -100,6 +120,7 @@ func getPolicyAttachment(svc iamiface.IAMAPI, attachType AttachmentType, policyA
 const (
 	RoleAttachmentType       AttachmentType = "role"
 	UserAttachmentType       AttachmentType = "user"
+	GroupAttachmentType      AttachmentType = "group"
 	ErrAttachmentTypeUnknown aws.ErrorCode  = "AttachmentType is unknown"
 )
 

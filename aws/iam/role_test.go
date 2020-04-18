@@ -50,7 +50,7 @@ func (m *mockIAMClient) UpdateRole(input *awsiam.UpdateRoleInput) (*awsiam.Updat
 
 func (m *mockIAMClient) DeleteRole(input *awsiam.DeleteRoleInput) (*awsiam.DeleteRoleOutput, error) {
 	// Check if input values are still as we want them to be
-	assert.Equal(m.t, awssdk.String(ReferenceRoleName), input.RoleName)
+	assert.Equal(m.t, awssdk.String(ReferenceExistingRoleName), input.RoleName)
 
 	return &awsiam.DeleteRoleOutput{}, nil
 }
@@ -184,7 +184,7 @@ func TestRoleInstance_createRole(t *testing.T) {
 /////////////
 
 func getReferenceRoleExistingArn() awsarn.ARN {
-	arn, _ := awsarn.Parse(fmt.Sprintf("arn:aws:iam::123456789012:role/%s", ReferenceRoleName))
+	arn, _ := awsarn.Parse(fmt.Sprintf("arn:aws:iam::123456789012:role/%s", ReferenceExistingRoleName))
 	return arn
 }
 
@@ -208,7 +208,7 @@ func getReferenceCreateRoleInput() *awsiam.CreateRoleInput {
 func getReferenceUpdateRoleInput() *awsiam.UpdateRoleInput {
 	return &awsiam.UpdateRoleInput{
 		Description: awssdk.String(ReferenceRoleDescription),
-		RoleName:    awssdk.String(ReferenceRoleName),
+		RoleName:    awssdk.String(ReferenceExistingRoleName),
 	}
 }
 
