@@ -1,3 +1,4 @@
+![pic](./92ACD85D-200A-49F0-AA6F-142C816BFE18.jpeg)
 # cloud-objects
 Generic Cloud Service Object C(R)UD Representation
 
