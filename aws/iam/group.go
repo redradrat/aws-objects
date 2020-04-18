@@ -65,6 +65,18 @@ func getGroup(svc iamiface.IAMAPI, groupArn awsarn.ARN) (*awsiam.GetGroupOutput,
 	return result, nil
 }
 
+func addUserToGroup(svc iamiface.IAMAPI, userArn, groupArn awsarn.ARN) error {
+	_, err := svc.AddUserToGroup(&awsiam.AddUserToGroupInput{
+		GroupName: awssdk.String(FriendlyNamefromARN(groupArn)),
+		UserName:  awssdk.String(FriendlyNamefromARN(userArn)),
+	})
+	if err != nil && !aws.IsAlreadyExistsError(err) {
+		return err
+	}
+
+	return nil
+}
+
 type GroupInstance struct {
 	Name string
 	arn  awsarn.ARN
@@ -126,4 +138,11 @@ func (g *GroupInstance) ARN() awsarn.ARN {
 
 func (g *GroupInstance) IsCreated(svc iamiface.IAMAPI) bool {
 	return g.arn.String() != awsarn.ARN{}.String()
+}
+
+func (g *GroupInstance) AddUser(svc iamiface.IAMAPI, userArn awsarn.ARN) error {
+	if !g.IsCreated(svc) {
+		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("Group '%s' not yet created", g.Name))
+	}
+	return addUserToGroup(svc, userArn, g.arn)
 }

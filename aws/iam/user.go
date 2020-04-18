@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	awsiam "github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/sethvargo/go-password/password"
 
 	"github.com/redradrat/cloud-objects/aws"
 )
@@ -35,6 +36,65 @@ func updateUser(svc iamiface.IAMAPI, userName string, arn awsarn.ARN) (*awsiam.U
 	}
 
 	return result, nil
+}
+
+func createLoginProfile(svc iamiface.IAMAPI, user string) (*LoginProfileCredentials, error) {
+	pass, err := password.Generate(20, 10, 0, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = svc.CreateLoginProfile(&awsiam.CreateLoginProfileInput{
+		Password:              awssdk.String(pass),
+		PasswordResetRequired: awssdk.Bool(false),
+		UserName:              awssdk.String(user),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewLoginProfileCredentials(user, pass), nil
+}
+
+func deleteLoginProfile(svc iamiface.IAMAPI, arn awsarn.ARN) error {
+	user := FriendlyNamefromARN(arn)
+
+	_, err := svc.DeleteLoginProfile(&awsiam.DeleteLoginProfileInput{
+		UserName: awssdk.String(user),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createAccessKey(svc iamiface.IAMAPI, user string) (*AccessKey, error) {
+	out, err := svc.CreateAccessKey(&awsiam.CreateAccessKeyInput{
+		UserName: awssdk.String(user),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	id := awssdk.StringValue(out.AccessKey.AccessKeyId)
+	secret := awssdk.StringValue(out.AccessKey.SecretAccessKey)
+
+	return NewAccessKey(id, secret), nil
+}
+
+func deleteAccessKey(svc iamiface.IAMAPI, keyId string, arn awsarn.ARN) error {
+	user := FriendlyNamefromARN(arn)
+
+	_, err := svc.DeleteAccessKey(&awsiam.DeleteAccessKeyInput{
+		AccessKeyId: awssdk.String(keyId),
+		UserName:    awssdk.String(user),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func deleteUser(svc iamiface.IAMAPI, arn awsarn.ARN) (*awsiam.DeleteUserOutput, error) {
@@ -65,19 +125,67 @@ func getUser(svc iamiface.IAMAPI, userArn awsarn.ARN) (*awsiam.GetUserOutput, er
 	return result, nil
 }
 
+type LoginProfileCredentials struct {
+	username string
+	password string
+}
+
+func NewLoginProfileCredentials(user string, pass string) *LoginProfileCredentials {
+	return &LoginProfileCredentials{
+		username: user,
+		password: pass,
+	}
+}
+
+func (lpc *LoginProfileCredentials) Username() string {
+	return lpc.username
+}
+func (lpc *LoginProfileCredentials) Password() string {
+	return lpc.password
+}
+
+type AccessKey struct {
+	id     string
+	secret string
+}
+
+func NewAccessKey(id string, secret string) *AccessKey {
+	return &AccessKey{
+		id:     id,
+		secret: secret,
+	}
+}
+
+func (ak *AccessKey) Id() string {
+	return ak.id
+}
+func (ak *AccessKey) Secret() string {
+	return ak.secret
+}
+
 type UserInstance struct {
-	Name string
-	arn  awsarn.ARN
+	Name                          string
+	LoginProfile                  bool
+	loginProfileCredentials       *LoginProfileCredentials
+	ProgrammaticAccess            bool
+	programmaticAccessCredentials *AccessKey
+	arn                           awsarn.ARN
 }
 
-func NewUserInstance(name string) *UserInstance {
-	return &UserInstance{Name: name}
-}
-
-func NewExistingUserInstance(name string, arn awsarn.ARN) *UserInstance {
+func NewUserInstance(name string, loginProfile, programmaticAccess bool) *UserInstance {
 	return &UserInstance{
-		Name: name,
-		arn:  arn,
+		Name:               name,
+		LoginProfile:       loginProfile,
+		ProgrammaticAccess: programmaticAccess,
+	}
+}
+
+func NewExistingUserInstance(name string, loginProfile, programmaticAccess bool, arn awsarn.ARN) *UserInstance {
+	return &UserInstance{
+		Name:               name,
+		LoginProfile:       loginProfile,
+		ProgrammaticAccess: programmaticAccess,
+		arn:                arn,
 	}
 }
 
@@ -93,6 +201,10 @@ func (u *UserInstance) Create(svc iamiface.IAMAPI) error {
 		return err
 	}
 	u.arn = newarn
+	// Create Access if required
+	if err = u.updateAccess(svc); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -105,6 +217,12 @@ func (u *UserInstance) Update(svc iamiface.IAMAPI) error {
 	if err != nil {
 		return err
 	}
+
+	// Update Access if required
+	if err = u.updateAccess(svc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -117,6 +235,11 @@ func (u *UserInstance) Delete(svc iamiface.IAMAPI) error {
 	if err != nil {
 		return err
 	}
+
+	if err = u.deleteAccess(svc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -126,4 +249,56 @@ func (u *UserInstance) ARN() awsarn.ARN {
 
 func (u *UserInstance) IsCreated(svc iamiface.IAMAPI) bool {
 	return u.arn.String() != awsarn.ARN{}.String()
+}
+
+func (u *UserInstance) LoginProfileCredentials() *LoginProfileCredentials {
+	return u.loginProfileCredentials
+}
+
+func (u *UserInstance) AccessKey() *AccessKey {
+	return u.programmaticAccessCredentials
+}
+
+func (u *UserInstance) updateAccess(svc iamiface.IAMAPI) error {
+	if u.LoginProfile && u.loginProfileCredentials == nil {
+		creds, err := createLoginProfile(svc, u.Name)
+		if err != nil {
+			return err
+		}
+		u.loginProfileCredentials = creds
+	}
+	if !u.LoginProfile && u.loginProfileCredentials != nil {
+		if err := deleteLoginProfile(svc, u.arn); err != nil {
+			return err
+		}
+		u.loginProfileCredentials = nil
+	}
+	if u.ProgrammaticAccess && u.programmaticAccessCredentials == nil {
+		creds, err := createAccessKey(svc, u.Name)
+		if err != nil {
+			return err
+		}
+		u.programmaticAccessCredentials = creds
+	}
+	if !u.ProgrammaticAccess && u.programmaticAccessCredentials != nil {
+		if err := deleteAccessKey(svc, u.programmaticAccessCredentials.id, u.arn); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *UserInstance) deleteAccess(svc iamiface.IAMAPI) error {
+	if u.loginProfileCredentials != nil {
+		if err := deleteLoginProfile(svc, u.arn); err != nil {
+			return err
+		}
+	}
+	if u.programmaticAccessCredentials != nil {
+		if err := deleteAccessKey(svc, u.programmaticAccessCredentials.id, u.arn); err != nil {
+			return err
+		}
+	}
+	return nil
 }

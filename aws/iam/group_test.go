@@ -24,6 +24,15 @@ const (
 	ReferenceGroupId           = "AGPA1234567890EXAMPLE"
 )
 
+func (m *mockIAMClient) AddUserToGroup(input *awsiam.AddUserToGroupInput) (*awsiam.AddUserToGroupOutput, error) {
+	if *input.UserName == FriendlyNamefromARN(getReferenceUserNonExistingArn()) {
+		return nil, awserr.New(awsiam.ErrCodeNoSuchEntityException, "user not found", fmt.Errorf("user not found"))
+	}
+	assert.Equal(m.t, ReferenceExistingUserName, *input.UserName)
+	assert.Equal(m.t, ReferenceExistingGroupName, *input.GroupName)
+	return &awsiam.AddUserToGroupOutput{}, nil
+}
+
 func (m *mockIAMClient) CreateGroup(input *awsiam.CreateGroupInput) (*awsiam.CreateGroupOutput, error) {
 	if *input.GroupName == ReferenceExistingGroupName {
 		return nil, fmt.Errorf("Group already exists")
@@ -135,6 +144,22 @@ func TestGroupInstance_Delete(t *testing.T) {
 	grpIns = NewExistingGroupInstance(ReferenceGroupName, getReferenceGroupExistingArn())
 	err = grpIns.Delete(mockSvc)
 	assert.NoError(t, err)
+}
+
+func TestGroupInstance_AddUser(t *testing.T) {
+	mockSvc := &mockIAMClient{t: t}
+
+	grpIns := NewExistingGroupInstance(ReferenceGroupName, getReferenceGroupExistingArn())
+	err := grpIns.AddUser(mockSvc, getReferenceUserExistingArn())
+	assert.NoError(t, err)
+
+	grpIns = NewGroupInstance(ReferenceGroupName)
+	err = grpIns.AddUser(mockSvc, getReferenceUserExistingArn())
+	assert.Error(t, err)
+
+	grpIns = NewExistingGroupInstance(ReferenceGroupName, getReferenceGroupExistingArn())
+	err = grpIns.AddUser(mockSvc, getReferenceUserNonExistingArn())
+	assert.Error(t, err)
 }
 
 func TestNewGroupInstance(t *testing.T) {

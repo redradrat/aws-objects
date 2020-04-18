@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 )
 
@@ -13,6 +15,13 @@ type Instance interface {
 	Delete(svc iamiface.IAMAPI) error
 	ARN() awsarn.ARN
 	IsCreated(svc iamiface.IAMAPI) bool
+}
+
+func IsAlreadyExistsError(err error) bool {
+	if err != nil {
+		return err.(awserr.Error).Code() == iam.ErrCodeEntityAlreadyExistsException
+	}
+	return false
 }
 
 // ARNify turns a list of string inputs into a list of parsed ARNs

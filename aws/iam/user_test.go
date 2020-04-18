@@ -22,6 +22,8 @@ const (
 	ReferenceUserName         = "thisismyuser"
 	ReferenceExistingUserName = "thisismyexistinguser"
 	ReferenceUserId           = "AIDA1234567890EXAMPLE"
+	ReferenceAccessKeyId      = "AKIA1234567890EXAMPLE"
+	ReferenceAccessKeySecret  = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 )
 
 func (m *mockIAMClient) CreateUser(input *awsiam.CreateUserInput) (*awsiam.CreateUserOutput, error) {
@@ -63,10 +65,51 @@ func (m *mockIAMClient) GetUser(input *awsiam.GetUserInput) (*awsiam.GetUserOutp
 	return createMockGetUserOutput(input), nil
 }
 
+func (m *mockIAMClient) CreateAccessKey(input *awsiam.CreateAccessKeyInput) (*awsiam.CreateAccessKeyOutput, error) {
+	return createMockCreateAccessKeyOutput(input), nil
+}
+
+func (m *mockIAMClient) DeleteAccessKey(input *awsiam.DeleteAccessKeyInput) (*awsiam.DeleteAccessKeyOutput, error) {
+	assert.Equal(m.t, ReferenceExistingUserName, *input.UserName)
+	assert.Equal(m.t, ReferenceAccessKeyId, *input.AccessKeyId)
+	return &awsiam.DeleteAccessKeyOutput{}, nil
+}
+
+func (m *mockIAMClient) CreateLoginProfile(input *awsiam.CreateLoginProfileInput) (*awsiam.CreateLoginProfileOutput, error) {
+	assert.Equal(m.t, false, *input.PasswordResetRequired)
+	return createMockCreateLoginProfileOutput(input), nil
+}
+
+func (m *mockIAMClient) DeleteLoginProfile(input *awsiam.DeleteLoginProfileInput) (*awsiam.DeleteLoginProfileOutput, error) {
+	assert.Equal(m.t, ReferenceExistingUserName, *input.UserName)
+	return &awsiam.DeleteLoginProfileOutput{}, nil
+}
+
+func createMockCreateAccessKeyOutput(input *awsiam.CreateAccessKeyInput) *awsiam.CreateAccessKeyOutput {
+	return &awsiam.CreateAccessKeyOutput{
+		AccessKey: &awsiam.AccessKey{
+			AccessKeyId:     awssdk.String(ReferenceAccessKeyId),
+			CreateDate:      awssdk.Time(getReferenceCreateTimestamp()),
+			SecretAccessKey: awssdk.String(ReferenceAccessKeySecret),
+			UserName:        input.UserName,
+		},
+	}
+}
+
+func createMockCreateLoginProfileOutput(input *awsiam.CreateLoginProfileInput) *awsiam.CreateLoginProfileOutput {
+	return &awsiam.CreateLoginProfileOutput{
+		LoginProfile: &awsiam.LoginProfile{
+			CreateDate:            awssdk.Time(getReferenceCreateTimestamp()),
+			UserName:              input.UserName,
+			PasswordResetRequired: input.PasswordResetRequired,
+		},
+	}
+}
+
 func createMockCreateUserOutput(input *awsiam.CreateUserInput) *awsiam.CreateUserOutput {
 	return &awsiam.CreateUserOutput{
 		User: &awsiam.User{
-			Arn:        awssdk.String(getReferencePolicyExistingArn().String()),
+			Arn:        awssdk.String(getReferenceUserNonExistingArn().String()),
 			CreateDate: awssdk.Time(getReferenceCreateTimestamp()),
 			Path:       input.Path,
 			UserId:     awssdk.String(ReferenceUserId),
@@ -80,7 +123,7 @@ func createMockGetUserOutput(input *awsiam.GetUserInput) *awsiam.GetUserOutput {
 
 	return &awsiam.GetUserOutput{
 		User: &awsiam.User{
-			Arn:              awssdk.String(getReferencePolicyExistingArn().String()),
+			Arn:              awssdk.String(getReferenceUserExistingArn().String()),
 			CreateDate:       awssdk.Time(getReferenceCreateTimestamp()),
 			PasswordLastUsed: awssdk.Time(getReferenceUpdateTimestamp()),
 			UserId:           awssdk.String(ReferenceUserId),
@@ -97,28 +140,48 @@ func TestUserInstance_Create(t *testing.T) {
 	// Setup Test
 	mockSvc := &mockIAMClient{t: t}
 
-	rolIns := NewUserInstance(ReferenceUserName)
-	err := rolIns.Create(mockSvc)
+	usrIns := NewUserInstance(ReferenceUserName, false, false)
+	err := usrIns.Create(mockSvc)
 	assert.NoError(t, err)
-	assert.True(t, rolIns.IsCreated(mockSvc))
+	assert.True(t, usrIns.IsCreated(mockSvc))
 
-	rolIns = NewUserInstance(ReferenceExistingUserName)
-	err = rolIns.Create(mockSvc)
+	usrIns = NewUserInstance(ReferenceExistingUserName, false, false)
+	err = usrIns.Create(mockSvc)
 	assert.Error(t, err)
+
+	// AccessKey
+	usrIns = NewUserInstance(ReferenceUserName, false, true)
+	err = usrIns.Create(mockSvc)
+	assert.NoError(t, err)
+	assert.True(t, usrIns.IsCreated(mockSvc))
+	assert.NotNil(t, usrIns.AccessKey())
+	assert.Nil(t, usrIns.LoginProfileCredentials())
+	assert.Equal(t, ReferenceAccessKeyId, usrIns.AccessKey().Id())
+	assert.Equal(t, ReferenceAccessKeySecret, usrIns.AccessKey().Secret())
+
+	// LoginProfile Credentials
+	usrIns = NewUserInstance(ReferenceUserName, true, false)
+	err = usrIns.Create(mockSvc)
+	assert.NoError(t, err)
+	assert.True(t, usrIns.IsCreated(mockSvc))
+	assert.NotNil(t, usrIns.LoginProfileCredentials())
+	assert.Nil(t, usrIns.AccessKey())
+	assert.Equal(t, ReferenceUserName, usrIns.LoginProfileCredentials().Username())
+	assert.True(t, len(usrIns.LoginProfileCredentials().Password()) == 20)
 }
 
 func TestUserInstance_Update(t *testing.T) {
 	// Setup Test
 	mockSvc := &mockIAMClient{t: t}
 
-	usrIns := NewUserInstance(ReferenceUserName)
+	usrIns := NewUserInstance(ReferenceUserName, false, false)
 
 	err := usrIns.Update(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, usrIns.IsCreated(mockSvc))
 
-	usrIns = NewExistingUserInstance(ReferenceUserName, getReferenceUserExistingArn())
+	usrIns = NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
 	err = usrIns.Update(mockSvc)
 	assert.NoError(t, err)
 }
@@ -127,25 +190,25 @@ func TestUserInstance_Delete(t *testing.T) {
 	// Setup Test
 	mockSvc := &mockIAMClient{t: t}
 
-	rolIns := NewUserInstance(ReferenceUserName)
+	rolIns := NewUserInstance(ReferenceUserName, false, false)
 
 	err := rolIns.Delete(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, rolIns.IsCreated(mockSvc))
 
-	rolIns = NewExistingUserInstance(ReferenceUserName, getReferenceUserExistingArn())
+	rolIns = NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
 	err = rolIns.Delete(mockSvc)
 	assert.NoError(t, err)
 }
 
 func TestNewUserInstance(t *testing.T) {
-	pi := NewUserInstance(ReferenceUserName)
+	pi := NewUserInstance(ReferenceUserName, false, false)
 	assert.Equal(t, getReferenceUserInstance(), pi)
 }
 
 func TestNewExistingUserInstance(t *testing.T) {
-	ri := NewExistingUserInstance(ReferenceUserName, getReferenceUserExistingArn())
+	ri := NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
 	riWithArn := getReferenceUserInstance()
 	riWithArn.arn = getReferenceUserExistingArn()
 	assert.Equal(t, riWithArn, ri)
