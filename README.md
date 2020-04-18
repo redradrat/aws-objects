@@ -1,4 +1,4 @@
-# cloud-objects
+# cloud-objects ![Go](https://github.com/redradrat/cloud-objects/workflows/Go/badge.svg?branch=master)
 Generic Cloud Service Object C(R)UD Representation
 
 This repository hosts a generic abstraction of Cloud Service Objects into golang CRUD instances.
