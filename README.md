@@ -9,4 +9,4 @@ Currently following Objects are implemented:
 
 | Amazon Web Service | Supported | Resources |
 | --- | --- | --- |
-| IAM | Partially | Policy, PolicyAttachment, Role |
+| IAM | Partially | Group, Policy, PolicyAttachment, Role, User |
