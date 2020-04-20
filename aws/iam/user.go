@@ -242,14 +242,15 @@ func (u *UserInstance) Delete(svc iamiface.IAMAPI) error {
 		return aws.NewInstanceNotYetCreatedError(fmt.Sprintf("User '%s' not yet created", u.Name))
 	}
 
+	if err := u.deleteAccess(svc); err != nil {
+		return err
+	}
+
 	_, err := deleteUser(svc, u.arn)
 	if err != nil {
 		return err
 	}
 
-	if err = u.deleteAccess(svc); err != nil {
-		return err
-	}
 
 	return nil
 }
