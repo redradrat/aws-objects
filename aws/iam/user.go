@@ -180,12 +180,14 @@ func NewUserInstance(name string, loginProfile, programmaticAccess bool) *UserIn
 	}
 }
 
-func NewExistingUserInstance(name string, loginProfile, programmaticAccess bool, arn awsarn.ARN) *UserInstance {
+func NewExistingUserInstance(name string, loginProfile *LoginProfileCredentials, programmaticAccess *AccessKey, arn awsarn.ARN) *UserInstance {
 	return &UserInstance{
-		Name:               name,
-		LoginProfile:       loginProfile,
-		ProgrammaticAccess: programmaticAccess,
-		arn:                arn,
+		Name:                          name,
+		LoginProfile:                  loginProfile != nil,
+		loginProfileCredentials:       loginProfile,
+		ProgrammaticAccess:            programmaticAccess != nil,
+		programmaticAccessCredentials: programmaticAccess,
+		arn:                           arn,
 	}
 }
 
