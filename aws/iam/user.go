@@ -49,7 +49,7 @@ func createLoginProfile(svc iamiface.IAMAPI, user string) (*LoginProfileCredenti
 		PasswordResetRequired: awssdk.Bool(false),
 		UserName:              awssdk.String(user),
 	})
-	if err != nil {
+	if err != nil && !aws.IsAlreadyExistsError(err) {
 		return nil, err
 	}
 
@@ -73,7 +73,7 @@ func createAccessKey(svc iamiface.IAMAPI, user string) (*AccessKey, error) {
 	out, err := svc.CreateAccessKey(&awsiam.CreateAccessKeyInput{
 		UserName: awssdk.String(user),
 	})
-	if err != nil {
+	if err != nil && !aws.IsAlreadyExistsError(err) {
 		return nil, err
 	}
 
@@ -83,15 +83,24 @@ func createAccessKey(svc iamiface.IAMAPI, user string) (*AccessKey, error) {
 	return NewAccessKey(id, secret), nil
 }
 
-func deleteAccessKey(svc iamiface.IAMAPI, keyId string, arn awsarn.ARN) error {
+func deleteAccessKeys(svc iamiface.IAMAPI, arn awsarn.ARN) error {
 	user := FriendlyNamefromARN(arn)
 
-	_, err := svc.DeleteAccessKey(&awsiam.DeleteAccessKeyInput{
-		AccessKeyId: awssdk.String(keyId),
-		UserName:    awssdk.String(user),
+	out, err := svc.ListAccessKeys(&awsiam.ListAccessKeysInput{
+		UserName: awssdk.String(user),
 	})
 	if err != nil {
 		return err
+	}
+
+	for _, key := range out.AccessKeyMetadata {
+		_, err := svc.DeleteAccessKey(&awsiam.DeleteAccessKeyInput{
+			AccessKeyId: key.AccessKeyId,
+			UserName:    awssdk.String(user),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -167,7 +176,9 @@ type UserInstance struct {
 	Name                          string
 	LoginProfile                  bool
 	loginProfileCredentials       *LoginProfileCredentials
+	existingLoginProfile          bool
 	ProgrammaticAccess            bool
+	existingAccessKey             bool
 	programmaticAccessCredentials *AccessKey
 	arn                           awsarn.ARN
 }
@@ -180,14 +191,12 @@ func NewUserInstance(name string, loginProfile, programmaticAccess bool) *UserIn
 	}
 }
 
-func NewExistingUserInstance(name string, loginProfile *LoginProfileCredentials, programmaticAccess *AccessKey, arn awsarn.ARN) *UserInstance {
+func NewExistingUserInstance(name string, existingLoginProfile, existingAccessKey bool, arn awsarn.ARN) *UserInstance {
 	return &UserInstance{
-		Name:                          name,
-		LoginProfile:                  loginProfile != nil,
-		loginProfileCredentials:       loginProfile,
-		ProgrammaticAccess:            programmaticAccess != nil,
-		programmaticAccessCredentials: programmaticAccess,
-		arn:                           arn,
+		Name:                 name,
+		existingLoginProfile: existingLoginProfile,
+		existingAccessKey:    existingAccessKey,
+		arn:                  arn,
 	}
 }
 
@@ -262,28 +271,28 @@ func (u *UserInstance) AccessKey() *AccessKey {
 }
 
 func (u *UserInstance) updateAccess(svc iamiface.IAMAPI) error {
-	if u.LoginProfile && u.loginProfileCredentials == nil {
+	if u.LoginProfile && !u.existingLoginProfile {
 		creds, err := createLoginProfile(svc, u.Name)
 		if err != nil {
 			return err
 		}
 		u.loginProfileCredentials = creds
 	}
-	if !u.LoginProfile && u.loginProfileCredentials != nil {
+	if !u.LoginProfile && u.existingLoginProfile {
 		if err := deleteLoginProfile(svc, u.arn); err != nil {
 			return err
 		}
 		u.loginProfileCredentials = nil
 	}
-	if u.ProgrammaticAccess && u.programmaticAccessCredentials == nil {
+	if u.ProgrammaticAccess && !u.existingAccessKey {
 		creds, err := createAccessKey(svc, u.Name)
 		if err != nil {
 			return err
 		}
 		u.programmaticAccessCredentials = creds
 	}
-	if !u.ProgrammaticAccess && u.programmaticAccessCredentials != nil {
-		if err := deleteAccessKey(svc, u.programmaticAccessCredentials.id, u.arn); err != nil {
+	if !u.ProgrammaticAccess && u.existingAccessKey {
+		if err := deleteAccessKeys(svc, u.arn); err != nil {
 			return err
 		}
 	}
@@ -292,13 +301,13 @@ func (u *UserInstance) updateAccess(svc iamiface.IAMAPI) error {
 }
 
 func (u *UserInstance) deleteAccess(svc iamiface.IAMAPI) error {
-	if u.loginProfileCredentials != nil {
+	if u.existingLoginProfile {
 		if err := deleteLoginProfile(svc, u.arn); err != nil {
 			return err
 		}
 	}
-	if u.programmaticAccessCredentials != nil {
-		if err := deleteAccessKey(svc, u.programmaticAccessCredentials.id, u.arn); err != nil {
+	if u.existingAccessKey {
+		if err := deleteAccessKeys(svc, u.arn); err != nil {
 			return err
 		}
 	}

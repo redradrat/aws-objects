@@ -69,6 +69,17 @@ func (m *mockIAMClient) CreateAccessKey(input *awsiam.CreateAccessKeyInput) (*aw
 	return createMockCreateAccessKeyOutput(input), nil
 }
 
+func (m *mockIAMClient) ListAccessKeys(input *awsiam.ListAccessKeysInput) (*awsiam.ListAccessKeysOutput, error) {
+	return &awsiam.ListAccessKeysOutput{
+		AccessKeyMetadata: []*awsiam.AccessKeyMetadata{
+			{
+				AccessKeyId: awssdk.String(ReferenceAccessKeyId),
+				UserName:    input.UserName,
+			},
+		},
+	}, nil
+}
+
 func (m *mockIAMClient) DeleteAccessKey(input *awsiam.DeleteAccessKeyInput) (*awsiam.DeleteAccessKeyOutput, error) {
 	assert.Equal(m.t, ReferenceExistingUserName, *input.UserName)
 	assert.Equal(m.t, ReferenceAccessKeyId, *input.AccessKeyId)
@@ -181,9 +192,7 @@ func TestUserInstance_Update(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, usrIns.IsCreated(mockSvc))
 
-	lp := &LoginProfileCredentials{username: ReferenceUserName, password: "randomstring23#!"}
-	pa := &AccessKey{id: ReferenceAccessKeyId, secret: ReferenceAccessKeySecret}
-	usrIns = NewExistingUserInstance(ReferenceUserName, lp, pa, getReferenceUserExistingArn())
+	usrIns = NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
 	err = usrIns.Update(mockSvc)
 	assert.NoError(t, err)
 }
@@ -192,17 +201,15 @@ func TestUserInstance_Delete(t *testing.T) {
 	// Setup Test
 	mockSvc := &mockIAMClient{t: t}
 
-	usrIns := NewUserInstance(ReferenceUserName, false, false)
+	rolIns := NewUserInstance(ReferenceUserName, false, false)
 
-	err := usrIns.Delete(mockSvc)
+	err := rolIns.Delete(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
-	assert.False(t, usrIns.IsCreated(mockSvc))
+	assert.False(t, rolIns.IsCreated(mockSvc))
 
-	lp := &LoginProfileCredentials{username: ReferenceUserName, password: "randomstring23#!"}
-	pa := &AccessKey{id: ReferenceAccessKeyId, secret: ReferenceAccessKeySecret}
-	usrIns = NewExistingUserInstance(ReferenceUserName, lp, pa, getReferenceUserExistingArn())
-	err = usrIns.Delete(mockSvc)
+	rolIns = NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
+	err = rolIns.Delete(mockSvc)
 	assert.NoError(t, err)
 }
 
@@ -212,12 +219,10 @@ func TestNewUserInstance(t *testing.T) {
 }
 
 func TestNewExistingUserInstance(t *testing.T) {
-	lp := &LoginProfileCredentials{username: ReferenceUserName, password: "randomstring23#!"}
-	pa := &AccessKey{id: ReferenceAccessKeyId, secret: ReferenceAccessKeySecret}
-	usrIns := NewExistingUserInstance(ReferenceUserName, lp, pa, getReferenceUserExistingArn())
-	riWithArn := getReferenceExistingUserInstance()
+	ri := NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
+	riWithArn := getReferenceUserInstance()
 	riWithArn.arn = getReferenceUserExistingArn()
-	assert.Equal(t, riWithArn, usrIns)
+	assert.Equal(t, riWithArn, ri)
 }
 
 func TestUserInstance_ARN(t *testing.T) {
@@ -266,17 +271,5 @@ func getReferenceUpdateUserInput() *awsiam.UpdateUserInput {
 func getReferenceUserInstance() *UserInstance {
 	return &UserInstance{
 		Name: ReferenceUserName,
-	}
-}
-
-func getReferenceExistingUserInstance() *UserInstance {
-	lp := &LoginProfileCredentials{username: ReferenceUserName, password: "randomstring23#!"}
-	pa := &AccessKey{id: ReferenceAccessKeyId, secret: ReferenceAccessKeySecret}
-	return &UserInstance{
-		Name:                          ReferenceUserName,
-		LoginProfile:                  true,
-		loginProfileCredentials:       lp,
-		ProgrammaticAccess:            true,
-		programmaticAccessCredentials: pa,
 	}
 }
