@@ -39,7 +39,7 @@ func updateUser(svc iamiface.IAMAPI, userName string, arn awsarn.ARN) (*awsiam.U
 }
 
 func createLoginProfile(svc iamiface.IAMAPI, user string) (*LoginProfileCredentials, error) {
-	pass, err := password.Generate(20, 10, 0, false, false)
+	pass, err := password.Generate(20, 8, 4, false, false)
 	if err != nil {
 		return nil, err
 	}
