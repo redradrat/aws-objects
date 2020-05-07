@@ -201,7 +201,7 @@ func getReferenceGroupNonExistingArn() awsarn.ARN {
 }
 
 func getReferenceGetGroupInput() *awsiam.GetGroupInput {
-	return &awsiam.GetGroupInput{GroupName: awssdk.String(ReferenceGroupName)}
+	return &awsiam.GetGroupInput{GroupName: awssdk.String(ReferenceExistingGroupName)}
 }
 
 func getReferenceCreateGroupInput() *awsiam.CreateGroupInput {

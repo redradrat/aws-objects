@@ -39,6 +39,21 @@ func updateGroup(svc iamiface.IAMAPI, groupName string, groupArn awsarn.ARN) (*a
 
 func deleteGroup(svc iamiface.IAMAPI, groupArn awsarn.ARN) (*awsiam.DeleteGroupOutput, error) {
 
+	getGroupOutput, err := svc.GetGroup(&awsiam.GetGroupInput{
+		GroupName: awssdk.String(FriendlyNamefromARN(groupArn)),
+	})
+
+	for _, user := range getGroupOutput.Users {
+		userArn, err := awsarn.Parse(*user.Arn)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := removeUserFromGroup(svc, userArn, groupArn); err != nil {
+			return nil, err
+		}
+	}
+
 	res, err := svc.DeleteGroup(&awsiam.DeleteGroupInput{
 		GroupName: awssdk.String(FriendlyNamefromARN(groupArn)),
 	})
