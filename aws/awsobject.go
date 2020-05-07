@@ -24,6 +24,13 @@ func IsAlreadyExistsError(err error) bool {
 	return false
 }
 
+func IsNotExistsError(err error) bool {
+	if err != nil {
+		return err.(awserr.Error).Code() == iam.ErrCodeNoSuchEntityException
+	}
+	return false
+}
+
 // ARNify turns a list of string inputs into a list of parsed ARNs
 func ARNify(input ...string) ([]awsarn.ARN, error) {
 	arns := []awsarn.ARN{}
