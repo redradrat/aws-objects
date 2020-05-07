@@ -191,9 +191,11 @@ func NewUserInstance(name string, loginProfile, programmaticAccess bool) *UserIn
 	}
 }
 
-func NewExistingUserInstance(name string, existingLoginProfile, existingAccessKey bool, arn awsarn.ARN) *UserInstance {
+func NewExistingUserInstance(name string, loginProfile, existingLoginProfile, programmaticAccess, existingAccessKey bool, arn awsarn.ARN) *UserInstance {
 	return &UserInstance{
 		Name:                 name,
+		LoginProfile:         loginProfile,
+		ProgrammaticAccess:   programmaticAccess,
 		existingLoginProfile: existingLoginProfile,
 		existingAccessKey:    existingAccessKey,
 		arn:                  arn,
@@ -250,7 +252,6 @@ func (u *UserInstance) Delete(svc iamiface.IAMAPI) error {
 	if err != nil {
 		return err
 	}
-
 
 	return nil
 }

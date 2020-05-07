@@ -192,7 +192,7 @@ func TestUserInstance_Update(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, usrIns.IsCreated(mockSvc))
 
-	usrIns = NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
+	usrIns = NewExistingUserInstance(ReferenceUserName, false, false, false, false, getReferenceUserExistingArn())
 	err = usrIns.Update(mockSvc)
 	assert.NoError(t, err)
 }
@@ -208,7 +208,7 @@ func TestUserInstance_Delete(t *testing.T) {
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, rolIns.IsCreated(mockSvc))
 
-	rolIns = NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
+	rolIns = NewExistingUserInstance(ReferenceUserName, false, false, false, false, getReferenceUserExistingArn())
 	err = rolIns.Delete(mockSvc)
 	assert.NoError(t, err)
 }
@@ -219,7 +219,7 @@ func TestNewUserInstance(t *testing.T) {
 }
 
 func TestNewExistingUserInstance(t *testing.T) {
-	ri := NewExistingUserInstance(ReferenceUserName, false, false, getReferenceUserExistingArn())
+	ri := NewExistingUserInstance(ReferenceUserName, false, false, false, false, getReferenceUserExistingArn())
 	riWithArn := getReferenceUserInstance()
 	riWithArn.arn = getReferenceUserExistingArn()
 	assert.Equal(t, riWithArn, ri)
