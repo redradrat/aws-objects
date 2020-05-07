@@ -62,7 +62,7 @@ func deleteLoginProfile(svc iamiface.IAMAPI, arn awsarn.ARN) error {
 	_, err := svc.DeleteLoginProfile(&awsiam.DeleteLoginProfileInput{
 		UserName: awssdk.String(user),
 	})
-	if err != nil {
+	if err != nil && !aws.IsNotExistsError(err) {
 		return err
 	}
 
