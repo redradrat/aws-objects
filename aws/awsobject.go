@@ -2,19 +2,22 @@ package aws
 
 import (
 	"fmt"
+	"strings"
 
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+
+	"github.com/redradrat/cloud-objects/cloudobject"
 )
 
 type Instance interface {
-	Create(svc iamiface.IAMAPI) error
-	Update(svc iamiface.IAMAPI) error
-	Delete(svc iamiface.IAMAPI) error
+	Create(session client.ConfigProvider) error
+	Update(session client.ConfigProvider) error
+	Delete(session client.ConfigProvider) error
 	ARN() awsarn.ARN
-	IsCreated(svc iamiface.IAMAPI) bool
+	IsCreated(session client.ConfigProvider) bool
 }
 
 func IsAlreadyExistsError(err error) bool {
@@ -29,6 +32,12 @@ func IsNotExistsError(err error) bool {
 		return err.(awserr.Error).Code() == iam.ErrCodeNoSuchEntityException
 	}
 	return false
+}
+
+// MustParse is a wrapper around Parse that swallows errors declaratively
+func MustParse(in string) awsarn.ARN {
+	out, _ := awsarn.Parse(in)
+	return out
 }
 
 // ARNify turns a list of string inputs into a list of parsed ARNs
@@ -67,4 +76,8 @@ func NewInstanceError(code ErrorCode, msg string) InstanceError {
 
 func NewInstanceNotYetCreatedError(msg string) InstanceError {
 	return NewInstanceError(ErrAWSInstanceNotYetCreated, msg)
+}
+
+func CloudObjectResource(context, resourceName string) string {
+	return fmt.Sprintf("%s-%s-%s", cloudobject.ResourceIdentifier, strings.ToUpper(context), resourceName)
 }

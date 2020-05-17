@@ -1,0 +1,106 @@
+package cloudobject
+
+// NotExistsError is returned when a Cloud Object does not exist
+type NotExistsError struct {
+	Message string
+}
+
+func (e NotExistsError) Error() string {
+	return e.Message
+}
+
+func IsNotExistsError(err error) bool {
+	_, ok := err.(NotExistsError)
+	return ok
+}
+
+func IgnoreNotExistsError(err error) error {
+	if IsNotExistsError(err) {
+		return nil
+	}
+	return err
+}
+
+// NotExistsError is returned when a Cloud Object does not exist
+type AmbiguousIdentifierError struct {
+	Message string
+}
+
+func (e AmbiguousIdentifierError) Error() string {
+	return e.Message
+}
+
+func IsAmbiguousIdentifierError(err error) bool {
+	_, ok := err.(AmbiguousIdentifierError)
+	return ok
+}
+
+func IgnoreAmbiguousIdentifierError(err error) error {
+	if IsAmbiguousIdentifierError(err) {
+		return nil
+	}
+	return err
+}
+
+// AlreadyExistsError is returned when a Cloud Object already exists
+type AlreadyExistsError struct {
+	Message string
+}
+
+func (e AlreadyExistsError) Error() string {
+	return e.Message
+}
+
+func IsAlreadyExistsError(err error) bool {
+	_, ok := err.(AlreadyExistsError)
+	return ok
+}
+
+func IgnoreAlreadyExistsError(err error) error {
+	if IsAlreadyExistsError(err) {
+		return nil
+	}
+	return err
+}
+
+// SpecInvalidError is returned when a CloudObjectSpec is invalid for the current action
+type SpecInvalidError struct {
+	Message string
+}
+
+func (e SpecInvalidError) Error() string {
+	return e.Message
+}
+
+func IsCloudSpecInvalidError(err error) bool {
+	_, ok := err.(SpecInvalidError)
+	return ok
+}
+
+func IgnoreCloudSpecInvalidError(err error) error {
+	if IsCloudSpecInvalidError(err) {
+		return nil
+	}
+	return err
+}
+
+// IdCollisionError is returned when a CloudObject cannot be created due to collisions with existing objects
+type IdCollisionError struct {
+	Message string
+}
+
+func (e IdCollisionError) Error() string {
+	return e.Message
+}
+
+func IsIdCollisionError(err error) bool {
+	_, ok := err.(IdCollisionError)
+	return ok
+}
+
+func IgnoreIdCollisionError(err error) error {
+	if IsIdCollisionError(err) {
+		return nil
+	}
+	return err
+}
