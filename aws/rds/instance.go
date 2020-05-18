@@ -20,9 +20,12 @@ type Instance struct {
 	session *awsrds.RDS
 }
 
-// NewRDSInstance returns a new RDS instance object
-func NewRDSInstance(name string, session client.ConfigProvider) (*Instance, error) {
-	if len(name) < 200 {
+// NewInstance returns a new RDS instance object
+func NewInstance(name string, session client.ConfigProvider) (*Instance, error) {
+	if len(name) == 0 {
+		return nil, fmt.Errorf("given name is empty")
+	}
+	if len(name) > 200 {
 		return nil, fmt.Errorf("given name is longer than 200 characters")
 	}
 
@@ -101,7 +104,8 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 		// As we didn't find preexisting key and snapshot, we know we need to create a new db. But:
 		// if key was found we need to error out... will clash with the one we'll be creating.
 		if keyFound {
-			return nil, cloudobject.IdCollisionError{Message: fmt.Sprintf("KMS key with id '%s' already exists")}
+			return nil, cloudobject.IdCollisionError{Message: fmt.Sprintf("KMS key with id '%s' already exists",
+				encryptionKeyName(i))}
 		}
 		// if snapshot was found we need to error out... will clash with the one we'll be creating.
 		if snapshotFound {
@@ -225,6 +229,10 @@ func (i *Instance) Exists() (bool, error) {
 	return cloudobject.Exists(i)
 }
 
+func (i *Instance) Status() cloudobject.Status {
+	return i.status
+}
+
 ////////////
 /// SPEC ///
 ////////////
@@ -302,11 +310,6 @@ type InstanceSpec struct {
 	// Monitoring defines a separete Monitoring role setup
 	Monitoring *InstanceMonitoringSpec
 
-	// A value that indicates whether the DB instance is a Multi-AZ deployment.
-	// You can't set the AvailabilityZone parameter if the DB instance is a Multi-AZ
-	// deployment.
-	MultiAZ bool
-
 	// Defines PerformanceInsights config if set
 	PerformanceInsights *InstancePerformanceInsightsSpec
 
@@ -332,7 +335,7 @@ type InstanceSpec struct {
 	//    * Must not conflict with the preferred maintenance window.
 	//
 	//    * Must be at least 30 minutes.
-	PreferredBackupWindow string `type:"string"`
+	PreferredBackupWindow string
 
 	// The time range each week during which system maintenance can occur, in Universal
 	// Coordinated Time (UTC). For more information, see Amazon RDS Maintenance
@@ -500,6 +503,10 @@ func (storageType InstanceStorageType) String() string {
 
 type InstanceStatus awsrds.DBInstance
 
+func (status *InstanceStatus) String() string {
+	return awsrds.DBInstance(*status).String()
+}
+
 type InstanceSecrets struct {
 }
 
@@ -513,6 +520,10 @@ func finalDBSnapshotName(i *Instance) string {
 	return aws.CloudObjectResource("PREDELETE", i.Id().String())
 }
 
+func encryptionKeyName(i *Instance) string {
+	return aws.CloudObjectResource("ENCKEY", i.Id().String())
+}
+
 // Use to see if pre-delete snapshot exists
 func snapshotExists(i *Instance) (bool, error) {
 	out, err := i.session.DescribeDBSnapshots(&awsrds.DescribeDBSnapshotsInput{
@@ -520,6 +531,9 @@ func snapshotExists(i *Instance) (bool, error) {
 		IncludePublic:        awssdk.Bool(false),
 		IncludeShared:        awssdk.Bool(false),
 	})
+	if err.(awserr.Error).Code() == awsrds.ErrCodeDBSnapshotNotFoundFault {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}

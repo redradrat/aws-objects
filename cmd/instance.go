@@ -16,10 +16,18 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/redradrat/cloud-objects/aws/rds"
+
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
 var instanceName string
+var instanceClass string
+var username string
+var password string
+var securityGroupIDs []string
 
 // instanceCmd represents the instance command
 var instanceCmd = &cobra.Command{
@@ -32,11 +40,24 @@ var instanceCmd = &cobra.Command{
 
 	*) cloud-objects aws rds instance delete --name testinstance`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		arg := args[0]
-		switch CloudObjectAction(arg) {
-		case CreateCloudObjectAction:
+		session, err := GetSession(cmd)
+		if err != nil {
+			cmd.PrintErrln(err.Error())
+			return
 		}
+		ins, err := rds.NewInstance(instanceName, session)
+		if err != nil {
+			cmd.PrintErrln(err.Error())
+			return
+		}
+		spec := rds.SanePostgres(instanceName, subnetGroupName, instanceClass, username, password, nil, securityGroupIDs)
+
+		_, err = HandleCloudObject(ins, &spec, CloudObjectAction(args[0]), false)
+		if err != nil {
+			cmd.PrintErrln(err.Error())
+			return
+		}
+		fmt.Println(ins.Status())
 	},
 }
 
@@ -51,5 +72,12 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	instanceCmd.Flags().StringVarP(&instanceName, "--name", "n", "", "The name of the instance")
+	instanceCmd.Flags().StringVarP(&instanceName, "name", "n", "", "The name of the instance")
+	instanceCmd.Flags().StringVar(&subnetGroupName, "subnetGroup", "", "The subnetGroup to use")
+	instanceCmd.Flags().StringVar(&instanceClass, "instanceClass", "", "The instance class to use")
+	instanceCmd.Flags().StringVar(&username, "username", "", "The master user name")
+	instanceCmd.Flags().StringVar(&password, "password", "", "The master user password")
+	instanceCmd.Flags().StringSliceVar(&securityGroupIDs, "securityGroups", []string{},
+		"The securityGroupIDs to attach to")
+
 }

@@ -8,8 +8,13 @@ type CloudObject interface {
 	Read() error
 	Update(CloudObjectSpec) (Secrets, error)
 	Delete(purge bool) error
+	Status() Status
 	Id() Id
 	Exists() (bool, error)
+}
+
+type Status interface {
+	String() string
 }
 
 // CloudObjectSpec should be an interface that Object Specs should implement

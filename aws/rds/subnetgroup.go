@@ -18,6 +18,13 @@ type SubnetGroup struct {
 }
 
 func NewSubnetGroup(name string, session client.ConfigProvider) (*SubnetGroup, error) {
+	if len(name) == 0 {
+		return nil, fmt.Errorf("given name is empty")
+	}
+	if len(name) > 200 {
+		return nil, fmt.Errorf("given name is longer than 200 characters")
+	}
+
 	sg := SubnetGroup{
 		name:    name,
 		session: awsrds.New(session),
@@ -132,6 +139,10 @@ func (s *SubnetGroup) Id() cloudobject.Id {
 	return cloudobject.Id(s.name)
 }
 
+func (s *SubnetGroup) Status() cloudobject.Status {
+	return s.status
+}
+
 ////////////
 /// SPEC ///
 ////////////
@@ -177,6 +188,10 @@ func (spec *SubnetGroupSpec) ModifyDBSubnetGroupInput(id string) awsrds.ModifyDB
 ///////////////
 
 type SubnetGroupStatus awsrds.DBSubnetGroup
+
+func (status *SubnetGroupStatus) String() string {
+	return awsrds.DBSubnetGroup(*status).String()
+}
 
 func awsTags(spec *SubnetGroupSpec) []*awsrds.Tag {
 	var tags []*awsrds.Tag

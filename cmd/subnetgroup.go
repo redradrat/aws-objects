@@ -16,6 +16,8 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/redradrat/cloud-objects/aws/rds"
@@ -60,6 +62,8 @@ var subnetgroupCmd = &cobra.Command{
 			cmd.PrintErrln(err.Error())
 			return
 		}
+		fmt.Println(sg.Status())
+
 	},
 }
 
