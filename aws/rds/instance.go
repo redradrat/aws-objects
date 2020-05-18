@@ -208,19 +208,20 @@ func (i *Instance) Delete(purge bool) error {
 			i.Id().String())}
 	}
 
-	// If snapshot already exists
 	snapExists, err := snapshotExists(i)
 	if err != nil {
 		return err
 	}
 
-	if snapExists {
+	// If snapshot already exists we need to throw an error, as we won't be able to backup
+	if snapExists && !purge {
 		return cloudobject.IdCollisionError{Message: fmt.Sprintf("cannot delete RDS instance '%s', "+
 			" as target snapshot '%s' already exists", i.Id().String(), finalDBSnapshotName(i))}
 	}
 
 	var skipfinalsnapshot bool
 	var deletebackups bool
+	// on purge, we don't want to store a final snapshot
 	if purge {
 		skipfinalsnapshot = true
 		deletebackups = true
@@ -232,12 +233,14 @@ func (i *Instance) Delete(purge bool) error {
 		FinalDBSnapshotIdentifier: awssdk.String(finalDBSnapshotName(i)),
 		SkipFinalSnapshot:         awssdk.Bool(skipfinalsnapshot),
 	}
+	// Let's do this... Let's actually delete the DB instance
 	if _, err := i.session.DeleteDBInstance(&input); err != nil {
 		if err.(awserr.Error).Code() != awsrds.ErrCodeDBInstanceNotFoundFault {
 			return err
 		}
 	}
 
+	// If purge we delete our encryption key also
 	if purge {
 		var key *kms.Key
 		key, err = kmsKeySession(i)
