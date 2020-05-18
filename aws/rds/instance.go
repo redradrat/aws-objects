@@ -7,10 +7,17 @@ import (
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	awsrds "github.com/aws/aws-sdk-go/service/rds"
 
 	"github.com/redradrat/cloud-objects/aws"
+	"github.com/redradrat/cloud-objects/aws/kms"
 	"github.com/redradrat/cloud-objects/cloudobject"
+)
+
+const (
+	PreDeleteDBSnapshotTopic = "PREDELETE"
+	DBInstanceTopic          = "DB"
 )
 
 // Instance represents the RDS Instance CloudObject
@@ -34,16 +41,12 @@ func NewInstance(name string, session client.ConfigProvider) (*Instance, error) 
 		session: awsrds.New(session),
 	}
 
-	if err := ins.Read(); cloudobject.IgnoreNotExistsError(err) != nil {
-		return nil, err
-	}
-
 	return &ins, nil
 }
 
 // Get the CloudObjectId for our Instance. Equals to Instance Name. This is not the AWS Id.
 func (i *Instance) Id() cloudobject.Id {
-	return cloudobject.Id(i.name)
+	return cloudobject.Id(aws.CloudObjectResource(DBInstanceTopic, i.name))
 }
 
 // Create our RDS Instance for realsies
@@ -77,7 +80,12 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	}
 
 	// Check whether encryption key already exists
-	keyFound, err = keyExists(i, assertedSpec)
+	var key *kms.Key
+	key, err = kmsKeySession(i)
+	if err != nil {
+		return nil, err
+	}
+	keyFound, err = key.Exists()
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +120,12 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 			return nil, cloudobject.IdCollisionError{Message: fmt.Sprintf(
 				"RDS snaphshot with id '%s' already exists", finalDBSnapshotName(i))}
 		}
+		// First let's create our kms key
+		key.Create(&kms.KeySpec{
+			KeyUsage: kms.EncryptDecryptKeyUsage,
+			KeyType:  kms.SymmetricDefaultKeyType,
+		})
+
 		// So now we should be good to go ahead with DB creation
 		input := assertedSpec.CreateDBInstanceInput(i.Id().String())
 		_, err = i.session.CreateDBInstance(&input)
@@ -126,6 +140,18 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	}
 
 	return nil, nil
+}
+
+func kmsKeySession(i *Instance) (*kms.Key, error) {
+	kmsSession, err := session.NewSession(&i.session.Config)
+	if err != nil {
+		return nil, err
+	}
+	key, err := kms.NewKey(i.name, kmsSession)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 func (i *Instance) Read() error {
@@ -207,11 +233,21 @@ func (i *Instance) Delete(purge bool) error {
 		SkipFinalSnapshot:         awssdk.Bool(skipfinalsnapshot),
 	}
 	if _, err := i.session.DeleteDBInstance(&input); err != nil {
-		return err
+		if err.(awserr.Error).Code() != awsrds.ErrCodeDBInstanceNotFoundFault {
+			return err
+		}
 	}
 
 	if purge {
-		// TODO: Handle key deletion
+		var key *kms.Key
+		key, err = kmsKeySession(i)
+		if err != nil {
+			return err
+		}
+		err = key.Delete(purge)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -517,11 +553,11 @@ func (secrets InstanceSecrets) Map() map[string]string {
 }
 
 func finalDBSnapshotName(i *Instance) string {
-	return aws.CloudObjectResource("PREDELETE", i.Id().String())
+	return aws.CloudObjectResource(PreDeleteDBSnapshotTopic, i.name)
 }
 
 func encryptionKeyName(i *Instance) string {
-	return aws.CloudObjectResource("ENCKEY", i.Id().String())
+	return aws.CloudObjectResource(kms.KMSKeyTopic, i.name)
 }
 
 // Use to see if pre-delete snapshot exists
@@ -551,9 +587,12 @@ func snapshotExists(i *Instance) (bool, error) {
 }
 
 // Use to see if DB key already exists
-func keyExists(i *Instance, assertedSpec *InstanceSpec) (bool, error) {
-	// TODO: implement key finding
-	return true, nil
+func keyExists(i *Instance, assertedSpec *InstanceSpec, kmsSession *session.Session) (bool, error) {
+	key, err := kms.NewKey(i.name, kmsSession)
+	if err != nil {
+		return false, err
+	}
+	return key.Exists()
 }
 
 ///////////////
@@ -564,7 +603,7 @@ func keyExists(i *Instance, assertedSpec *InstanceSpec) (bool, error) {
 func (spec *InstanceSpec) CreateDBInstanceInput(id string) awsrds.CreateDBInstanceInput {
 	dbname := getDBName(spec)
 
-	tags := compileTags(spec)
+	tags := compileTags(spec.Tags)
 
 	out := awsrds.CreateDBInstanceInput{
 		AutoMinorVersionUpgrade: awssdk.Bool(spec.AutoMinorVersionUpgrade),
@@ -620,7 +659,7 @@ func (spec *InstanceSpec) RestoreDBInstanceFromDBSnapshotInput(id string, snapsh
 
 	dbname := getDBName(spec)
 
-	tags := compileTags(spec)
+	tags := compileTags(spec.Tags)
 
 	out := awsrds.RestoreDBInstanceFromDBSnapshotInput{
 		AutoMinorVersionUpgrade: awssdk.Bool(spec.AutoMinorVersionUpgrade),
@@ -701,17 +740,6 @@ func getDBName(spec *InstanceSpec) string {
 		dbname = "default"
 	}
 	return dbname
-}
-
-func compileTags(spec *InstanceSpec) []*awsrds.Tag {
-	var tags []*awsrds.Tag
-	for k, v := range spec.Tags {
-		tags = append(tags, &awsrds.Tag{
-			Key:   awssdk.String(k),
-			Value: awssdk.String(v),
-		})
-	}
-	return tags
 }
 
 //////////////

@@ -8,7 +8,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	awsrds "github.com/aws/aws-sdk-go/service/rds"
 
+	"github.com/redradrat/cloud-objects/aws"
 	"github.com/redradrat/cloud-objects/cloudobject"
+)
+
+const (
+	DBSubnetGroupTopic = "SG"
 )
 
 type SubnetGroup struct {
@@ -113,17 +118,17 @@ func (s *SubnetGroup) Delete(purge bool) error {
 	if err != nil {
 		return err
 	}
+
+	// If DB SubnetGroup doesn't exist, there is nothing to do for us here
 	if !exists {
-		// Someone is trying to play a whoopsie-doo on us. Oh my... Such Pranksters!
-		return cloudobject.NotExistsError{Message: fmt.Sprintf("cannot delete non-existing RDS DB SubnetGroup '%s'",
-			s.Id().String())}
+		return nil
 	}
 
 	input := awsrds.DeleteDBSubnetGroupInput{
 		DBSubnetGroupName: s.Id().StringPtr(),
 	}
 	// Now let's go for it... delete that naughty SubnetGroup!! (kill it with fire, pwetty please)
-	if _, err := s.session.DeleteDBSubnetGroup(&input); err != nil {
+	if _, err := s.session.DeleteDBSubnetGroup(&input); cloudobject.IgnoreNotExistsError(err) != nil {
 		return err
 	}
 
@@ -136,7 +141,7 @@ func (s *SubnetGroup) Exists() (bool, error) {
 }
 
 func (s *SubnetGroup) Id() cloudobject.Id {
-	return cloudobject.Id(s.name)
+	return cloudobject.Id(aws.CloudObjectResource(DBSubnetGroupTopic, s.name))
 }
 
 func (s *SubnetGroup) Status() cloudobject.Status {
