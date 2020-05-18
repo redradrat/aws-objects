@@ -19,30 +19,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	RegionFlag = "region"
-	PurgeFlag = "purge"
-)
+// kmsCmd represents the kms command
+var kmsCmd = &cobra.Command{
+	Use:   "kms",
+	Short: "Interact with KMS cloud objects",
+	Long: `Interact with KMS cloud objects. For example:
 
-// awsCmd represents the aws command
-var awsCmd = &cobra.Command{
-	Use:              "aws",
-	TraverseChildren: true,
-	Short:            "Interact with AWS cloud objects",
-	Long:             ``,
+	*) cloud-objects aws kms key create --name testinstance
+
+	*) cloud-objects aws kms key delete --name testinstance`,
 }
 
 func init() {
-	RootCmd.AddCommand(awsCmd)
+	awsCmd.AddCommand(kmsCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	awsCmd.PersistentFlags().String(RegionFlag, "", "The AWS region to work with")
-	awsCmd.PersistentFlags().Bool(PurgeFlag, false, "Whether to purge on deletion")
+	// kmsCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// awsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// kmsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
