@@ -46,6 +46,15 @@ func (k *Key) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, err
 		return nil, cloudobject.SpecInvalidError{Message: "got unsupported spec"}
 	}
 
+	// If the KMS Key already exists, we're gonna throw an error here... you're trying to play us for a fool!
+	exists, err := i.Exists()
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, nil
+	}
+
 	// Now let's go for it... create this Key!
 	input := assertedSpec.CreateKeyInput()
 	out, err := k.session.CreateKey(&input)
@@ -114,7 +123,6 @@ func (k *Key) Delete(purge bool) error {
 	if !exists {
 		return nil
 	}
-
 
 	// Now let's go for it...
 	// First we disable the actual key

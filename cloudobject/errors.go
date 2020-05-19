@@ -21,6 +21,27 @@ func IgnoreNotExistsError(err error) error {
 	return err
 }
 
+// NotReadyError is returned when a Cloud Object does not exist
+type NotReadyError struct {
+	Message string
+}
+
+func (e NotReadyError) Error() string {
+	return e.Message
+}
+
+func IsNotReadyError(err error) bool {
+	_, ok := err.(NotReadyError)
+	return ok
+}
+
+func IgnoreNotReadyError(err error) error {
+	if IsNotReadyError(err) {
+		return nil
+	}
+	return err
+}
+
 // NotExistsError is returned when a Cloud Object does not exist
 type AmbiguousIdentifierError struct {
 	Message string

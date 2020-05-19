@@ -46,9 +46,18 @@ func (s *SubnetGroup) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secr
 		return nil, cloudobject.SpecInvalidError{Message: "got unsupported spec"}
 	}
 
+	// If the SubnetGroup already exists, we're done here... you're trying to play us for a fool!
+	exists, err := s.Exists()
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, nil
+	}
+
 	// Now let's go for it... create this SubnetGroup!
 	input := assertedSpec.CreateDBSubnetGroupInput(s.Id().String())
-	_, err := s.session.CreateDBSubnetGroup(&input)
+	_, err = s.session.CreateDBSubnetGroup(&input)
 	if err != nil {
 		return nil, err
 	}

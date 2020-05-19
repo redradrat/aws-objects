@@ -60,14 +60,13 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 		return nil, cloudobject.SpecInvalidError{Message: "got unsupported spec"}
 	}
 
-	// If the RDS Instance already exists, we're gonna throw an error here... you're trying to play us for a fool!
+	// If the RDS Instance already exists, we're done here... you're trying to play us for a fool!
 	exists, err := i.Exists()
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		return nil, cloudobject.AlreadyExistsError{Message: fmt.Sprintf("RDS instance '%s' already exists",
-			i.Id().String())}
+		return nil, nil
 	}
 
 	var snapshotFound bool
@@ -97,8 +96,8 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	}
 
 	if restore {
-		// If create mode is restore, but RestorationEnabled is false, we need to throw an error here
-		if !assertedSpec.RestorationEnabled {
+		// If create mode is restore, but RestorationDisabled is false, we need to throw an error here
+		if assertedSpec.RestorationDisabled {
 			return nil, RestorationDisabledError{Message: fmt.Sprintf("creation without restoration triggered, "+
 				"but key and snapshot exist for RDS Instance '%s'", i.Id().String())}
 		}
@@ -109,22 +108,22 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 			return nil, err
 		}
 	} else {
-		// As we didn't find preexisting key and snapshot, we know we need to create a new db. But:
-		// if key was found we need to error out... will clash with the one we'll be creating.
-		if keyFound {
-			return nil, cloudobject.IdCollisionError{Message: fmt.Sprintf("KMS key with id '%s' already exists",
-				encryptionKeyName(i))}
-		}
-		// if snapshot was found we need to error out... will clash with the one we'll be creating.
+		// If snapshot was found, but no key, we need to error out.
 		if snapshotFound {
-			return nil, cloudobject.IdCollisionError{Message: fmt.Sprintf(
-				"RDS snaphshot with id '%s' already exists", finalDBSnapshotName(i))}
+			return nil, cloudobject.NotExistsError{Message: fmt.Sprintf(
+				"RDS snaphshot with id '%s' already exists, but no key found", finalDBSnapshotName(i))}
 		}
-		// First let's create our kms key
-		key.Create(&kms.KeySpec{
-			KeyUsage: kms.EncryptDecryptKeyUsage,
-			KeyType:  kms.SymmetricDefaultKeyType,
-		})
+
+		// Let's create our key, if it doesn't already exist.
+		if !keyFound {
+			_, err := key.Create(&kms.KeySpec{
+				KeyUsage: kms.EncryptDecryptKeyUsage,
+				KeyType:  kms.SymmetricDefaultKeyType,
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		// So now we should be good to go ahead with DB creation
 		input := assertedSpec.CreateDBInstanceInput(i.Id().String())
@@ -208,6 +207,17 @@ func (i *Instance) Delete(purge bool) error {
 			i.Id().String())}
 	}
 
+	// If status is already in 'deleting' then we can stop here
+	if *i.status.DBInstanceStatus == "deleting" {
+		return nil
+	}
+
+	// If status is not available, we shouldn't continue... we should only delete instances that are ready
+	if *i.status.DBInstanceStatus != "available" {
+		return cloudobject.NotReadyError{Message: fmt.Sprintf("cannot delete not-available RDS instance '%s'",
+			i.Id().String())}
+	}
+
 	snapExists, err := snapshotExists(i)
 	if err != nil {
 		return err
@@ -215,8 +225,12 @@ func (i *Instance) Delete(purge bool) error {
 
 	// If snapshot already exists we need to throw an error, as we won't be able to backup
 	if snapExists && !purge {
-		return cloudobject.IdCollisionError{Message: fmt.Sprintf("cannot delete RDS instance '%s', "+
-			" as target snapshot '%s' already exists", i.Id().String(), finalDBSnapshotName(i))}
+		_, err := i.session.DeleteDBSnapshot(&awsrds.DeleteDBSnapshotInput{
+			DBSnapshotIdentifier: awssdk.String(finalDBSnapshotName(i)),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	var skipfinalsnapshot bool
@@ -234,6 +248,12 @@ func (i *Instance) Delete(purge bool) error {
 		SkipFinalSnapshot:         awssdk.Bool(skipfinalsnapshot),
 	}
 	// Let's do this... Let's actually delete the DB instance
+	if _, err := i.session.ModifyDBInstance(&awsrds.ModifyDBInstanceInput{
+		DeletionProtection:   awssdk.Bool(false),
+		DBInstanceIdentifier: i.Id().StringPtr(),
+	}); err != nil {
+		return err
+	}
 	if _, err := i.session.DeleteDBInstance(&input); err != nil {
 		if err.(awserr.Error).Code() != awsrds.ErrCodeDBInstanceNotFoundFault {
 			return err
@@ -394,7 +414,7 @@ type InstanceSpec struct {
 	PubliclyAccessible bool
 
 	// Defines whether auto-restore procedures should be used
-	RestorationEnabled bool
+	RestorationDisabled bool
 
 	Storage InstanceStorageSpec
 
@@ -570,10 +590,10 @@ func snapshotExists(i *Instance) (bool, error) {
 		IncludePublic:        awssdk.Bool(false),
 		IncludeShared:        awssdk.Bool(false),
 	})
-	if err.(awserr.Error).Code() == awsrds.ErrCodeDBSnapshotNotFoundFault {
-		return false, nil
-	}
 	if err != nil {
+		if err.(awserr.Error).Code() == awsrds.ErrCodeDBSnapshotNotFoundFault {
+			return false, nil
+		}
 		return false, err
 	}
 	// If our output DB list is greater than 1, we have an issue with our backup detector
@@ -660,8 +680,6 @@ func (spec *InstanceSpec) CreateDBInstanceInput(id string) awsrds.CreateDBInstan
 func (spec *InstanceSpec) RestoreDBInstanceFromDBSnapshotInput(id string, snapshotId string) awsrds.
 	RestoreDBInstanceFromDBSnapshotInput {
 
-	dbname := getDBName(spec)
-
 	tags := compileTags(spec.Tags)
 
 	out := awsrds.RestoreDBInstanceFromDBSnapshotInput{
@@ -669,7 +687,6 @@ func (spec *InstanceSpec) RestoreDBInstanceFromDBSnapshotInput(id string, snapsh
 		CopyTagsToSnapshot:      awssdk.Bool(true),
 		DBInstanceClass:         awssdk.String(spec.DBInstanceClass),
 		DBInstanceIdentifier:    awssdk.String(id),
-		DBName:                  awssdk.String(dbname),
 		DBSnapshotIdentifier:    awssdk.String(snapshotId),
 		DBSubnetGroupName:       awssdk.String(spec.DBSubnetGroupName),
 		DeletionProtection:      awssdk.Bool(true),
