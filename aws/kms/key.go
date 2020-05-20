@@ -47,7 +47,7 @@ func (k *Key) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, err
 	}
 
 	// If the KMS Key already exists, we're gonna throw an error here... you're trying to play us for a fool!
-	exists, err := i.Exists()
+	exists, err := k.Exists()
 	if err != nil {
 		return nil, err
 	}
