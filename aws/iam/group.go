@@ -42,6 +42,9 @@ func deleteGroup(svc iamiface.IAMAPI, groupArn awsarn.ARN) (*awsiam.DeleteGroupO
 	getGroupOutput, err := svc.GetGroup(&awsiam.GetGroupInput{
 		GroupName: awssdk.String(FriendlyNamefromARN(groupArn)),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	for _, user := range getGroupOutput.Users {
 		userArn, err := awsarn.Parse(*user.Arn)
