@@ -1,3 +1,3 @@
 package cloudobject
 
-const ResourceIdentifier = "CLOBJX"
+const ResourceIdentifier = "clobjx"

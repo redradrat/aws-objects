@@ -2,7 +2,6 @@ package aws
 
 import (
 	"fmt"
-	"strings"
 
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -79,5 +78,5 @@ func NewInstanceNotYetCreatedError(msg string) InstanceError {
 }
 
 func CloudObjectResource(context, resourceName string) string {
-	return fmt.Sprintf("%s-%s-%s", cloudobject.ResourceIdentifier, strings.ToUpper(context), resourceName)
+	return fmt.Sprintf("%s-%s-%s", cloudobject.ResourceIdentifier, context, resourceName)
 }

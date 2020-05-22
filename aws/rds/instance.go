@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	PreDeleteDBSnapshotTopic = "PREDELETE"
-	DBInstanceTopic          = "DB"
+	PreDeleteDBSnapshotTopic = "predelete"
+	DBInstanceTopic          = "db"
 )
 
 // Instance represents the RDS Instance CloudObject
@@ -187,9 +187,13 @@ func (i *Instance) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	}
 	// Here we could copy the old instance before we read again, and compute a delta
 	oldStatus := i.status
-	if awssdk.StringValue(oldStatus.AvailabilityZone) != assertedSpec.AvailabilityZone {
-		return nil, cloudobject.SpecInvalidError{Message: "modifying AvailabilityZone is not possible"}
+
+	if awssdk.BoolValue(oldStatus.MultiAZ) {
+		if assertedSpec.DBSubnetGroupName != awssdk.StringValue(oldStatus.DBSubnetGroup.DBSubnetGroupName) {
+			return nil, cloudobject.SpecInvalidError{Message: "modifying DBSubnetGroupName is not possible for MultiAZ instances"}
+		}
 	}
+
 	input := assertedSpec.ModifyDBInstanceInput(i.Id().String())
 	if _, err := i.session.ModifyDBInstance(&input); err != nil {
 		return nil, err
@@ -579,10 +583,6 @@ func finalDBSnapshotName(i *Instance) string {
 	return aws.CloudObjectResource(PreDeleteDBSnapshotTopic, i.name)
 }
 
-func encryptionKeyName(i *Instance) string {
-	return aws.CloudObjectResource(kms.KMSKeyTopic, i.name)
-}
-
 // Use to see if pre-delete snapshot exists
 func snapshotExists(i *Instance) (bool, error) {
 	out, err := i.session.DescribeDBSnapshots(&awsrds.DescribeDBSnapshotsInput{
@@ -668,6 +668,10 @@ func (spec *InstanceSpec) CreateDBInstanceInput(id string) awsrds.CreateDBInstan
 		out.PerformanceInsightsRetentionPeriod = awssdk.Int64(spec.PerformanceInsights.PerformanceInsightsRetentionPeriod)
 	}
 
+	if spec.DBSubnetGroupName != "" {
+		out.DBSubnetGroupName = awssdk.String(spec.DBSubnetGroupName)
+	}
+
 	if spec.AvailabilityZone != "" {
 		out.AvailabilityZone = awssdk.String(spec.AvailabilityZone)
 	} else {
@@ -715,19 +719,18 @@ func (spec *InstanceSpec) RestoreDBInstanceFromDBSnapshotInput(id string, snapsh
 func (spec *InstanceSpec) ModifyDBInstanceInput(id string) awsrds.
 	ModifyDBInstanceInput {
 	out := awsrds.ModifyDBInstanceInput{
-		ApplyImmediately:        awssdk.Bool(true),
-		AutoMinorVersionUpgrade: awssdk.Bool(spec.AutoMinorVersionUpgrade),
-		BackupRetentionPeriod:   awssdk.Int64(spec.BackupRetentionPeriod),
-		CopyTagsToSnapshot:      awssdk.Bool(true),
-		DBInstanceClass:         awssdk.String(spec.DBInstanceClass),
-		DBInstanceIdentifier:    awssdk.String(id), DBSubnetGroupName: awssdk.String(spec.DBSubnetGroupName),
+		ApplyImmediately:           awssdk.Bool(true),
+		AutoMinorVersionUpgrade:    awssdk.Bool(spec.AutoMinorVersionUpgrade),
+		BackupRetentionPeriod:      awssdk.Int64(spec.BackupRetentionPeriod),
+		CopyTagsToSnapshot:         awssdk.Bool(true),
+		DBInstanceClass:            awssdk.String(spec.DBInstanceClass),
+		DBInstanceIdentifier:       awssdk.String(id),
 		DeletionProtection:         awssdk.Bool(true),
 		EngineVersion:              awssdk.String(spec.EngineVersion),
 		MasterUserPassword:         awssdk.String(spec.MasterUserPassword),
 		PreferredBackupWindow:      awssdk.String(spec.PreferredBackupWindow),
 		PreferredMaintenanceWindow: awssdk.String(spec.PreferredMaintenanceWindow),
 		PubliclyAccessible:         awssdk.Bool(spec.PubliclyAccessible),
-		VpcSecurityGroupIds:        awssdk.StringSlice(spec.VpcSecurityGroupIds),
 	}
 
 	out.StorageType = awssdk.String(spec.Storage.StorageType.String())
@@ -747,8 +750,19 @@ func (spec *InstanceSpec) ModifyDBInstanceInput(id string) awsrds.
 		out.PerformanceInsightsRetentionPeriod = awssdk.Int64(spec.PerformanceInsights.PerformanceInsightsRetentionPeriod)
 	}
 
+	if spec.PerformanceInsights != nil {
+		out.EnablePerformanceInsights = awssdk.Bool(true)
+		out.PerformanceInsightsRetentionPeriod = awssdk.Int64(spec.PerformanceInsights.PerformanceInsightsRetentionPeriod)
+	}
+
 	if spec.AvailabilityZone == "" {
 		out.MultiAZ = awssdk.Bool(true)
+	} else {
+		out.MultiAZ = awssdk.Bool(false)
+	}
+
+	if len(spec.VpcSecurityGroupIds) != 0 {
+		out.VpcSecurityGroupIds = awssdk.StringSlice(spec.VpcSecurityGroupIds)
 	}
 
 	return out
