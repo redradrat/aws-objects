@@ -11,7 +11,7 @@ func SanePostgres(name, subnetGroupName, instanceClass, user, pass string, tags 
 		BackupRetentionPeriod:      14,
 		DBInstanceClass:            instanceClass,
 		DBName:                     name,
-		DBSubnetGroupName:          aws.CloudObjectResource("SG", subnetGroupName),
+		DBSubnetGroupName:          aws.CloudObjectResource(DBSubnetGroupTopic, subnetGroupName),
 		Engine:                     PostgreSQLInstanceDBEngine,
 		EngineVersion:              "12.2",
 		MasterUserPassword:         pass,

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	KMSKeyTopic = "ENCKEY"
+	KMSKeyTopic = "enckey"
 )
 
 type Key struct {

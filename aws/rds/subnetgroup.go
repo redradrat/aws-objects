@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	DBSubnetGroupTopic = "SG"
+	DBSubnetGroupTopic = "sg"
 )
 
 type SubnetGroup struct {

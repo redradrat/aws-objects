@@ -21,7 +21,7 @@ import (
 
 const (
 	RegionFlag = "region"
-	PurgeFlag = "purge"
+	PurgeFlag  = "purge"
 )
 
 // awsCmd represents the aws command
