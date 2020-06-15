@@ -51,6 +51,20 @@ func (m *mockIAMClient) CreatePolicyVersion(input *awsiam.CreatePolicyVersionInp
 	return out, nil
 }
 
+func (m *mockIAMClient) ListPolicyVersions(input *awsiam.ListPolicyVersionsInput) (*awsiam.ListPolicyVersionsOutput, error) {
+	// Check if input values are still as we want them to be
+	assert.Equal(m.t, awssdk.String(getReferencePolicyExistingArn().String()), input.PolicyArn)
+	out := createMockListPolicyVersionsOutput()
+	return out, nil
+}
+
+func (m *mockIAMClient) DeletePolicyVersion(input *awsiam.DeletePolicyVersionInput) (*awsiam.DeletePolicyVersionOutput, error) {
+	// Check if input values are still as we want them to be
+	assert.Equal(m.t, awssdk.String(getReferencePolicyExistingArn().String()), input.PolicyArn)
+	out := createMockDeletePolicyVersionsOutput()
+	return out, nil
+}
+
 func (m *mockIAMClient) DeletePolicy(input *awsiam.DeletePolicyInput) (*awsiam.DeletePolicyOutput, error) {
 	// Check if input values are still as we want them to be
 	assert.True(m.t, arn.IsARN(*input.PolicyArn))
@@ -76,7 +90,7 @@ func (m *mockIAMClient) GetPolicyVersion(input *awsiam.GetPolicyVersionInput) (*
 	}
 
 	assert.Equal(m.t, getReferenceGetPolicyVersionInput(), input)
-	return createMockGetPolicyVersionOutput(input), nil
+	return createMockGetPolicyVersionOutput(), nil
 }
 
 func createMockCreatePolicyOutput(input *awsiam.CreatePolicyInput) *awsiam.CreatePolicyOutput {
@@ -96,7 +110,19 @@ func createMockCreatePolicyOutput(input *awsiam.CreatePolicyInput) *awsiam.Creat
 	}
 }
 
-func createMockGetPolicyVersionOutput(input *awsiam.GetPolicyVersionInput) *awsiam.GetPolicyVersionOutput {
+func createMockListPolicyVersionsOutput() *awsiam.ListPolicyVersionsOutput {
+	return &awsiam.ListPolicyVersionsOutput{
+		Versions: []*awsiam.PolicyVersion{
+			createMockGetPolicyVersionOutput().PolicyVersion,
+		},
+	}
+}
+
+func createMockDeletePolicyVersionsOutput() *awsiam.DeletePolicyVersionOutput {
+	return &awsiam.DeletePolicyVersionOutput{}
+}
+
+func createMockGetPolicyVersionOutput() *awsiam.GetPolicyVersionOutput {
 	return &awsiam.GetPolicyVersionOutput{
 		PolicyVersion: &awsiam.PolicyVersion{
 			CreateDate:       awssdk.Time(getReferenceUpdateTimestamp()),

@@ -50,6 +50,26 @@ func updatePolicy(svc iamiface.IAMAPI, policyArn awsarn.ARN, pd PolicyDocument) 
 }
 
 func deletePolicy(svc iamiface.IAMAPI, arn awsarn.ARN) (*iam.DeletePolicyOutput, error) {
+
+	// To delete a policy, we need to delete all policy versions
+	listPolicyOut, err := svc.ListPolicyVersions(&iam.ListPolicyVersionsInput{
+		PolicyArn: awssdk.String(arn.String()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, version := range listPolicyOut.Versions {
+		_, err := svc.DeletePolicyVersion(&iam.DeletePolicyVersionInput{
+			PolicyArn: awssdk.String(arn.String()),
+			VersionId: version.VersionId,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Now we can delete the actual policy
 	res, err := svc.DeletePolicy(&iam.DeletePolicyInput{
 		PolicyArn: awssdk.String(arn.String()),
 	})
