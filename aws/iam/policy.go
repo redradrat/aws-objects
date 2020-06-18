@@ -60,12 +60,14 @@ func deletePolicy(svc iamiface.IAMAPI, arn awsarn.ARN) (*iam.DeletePolicyOutput,
 	}
 
 	for _, version := range listPolicyOut.Versions {
-		_, err := svc.DeletePolicyVersion(&iam.DeletePolicyVersionInput{
-			PolicyArn: awssdk.String(arn.String()),
-			VersionId: version.VersionId,
-		})
-		if err != nil {
-			return nil, err
+		if !awssdk.BoolValue(version.IsDefaultVersion) {
+			_, err := svc.DeletePolicyVersion(&iam.DeletePolicyVersionInput{
+				PolicyArn: awssdk.String(arn.String()),
+				VersionId: version.VersionId,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
