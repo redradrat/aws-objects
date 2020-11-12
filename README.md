@@ -10,3 +10,5 @@ Currently following Objects are implemented:
 | Amazon Web Service | Supported Resources |
 | --- | --- |
 | IAM | <ul><li>Group</li><li>Policy</li><li>PolicyAttachment</li><li>Role</li><li>User</li></ul> |
+| RDS | <ul><li>DB Instance</li><li>DB SubnetGroup</li></ul> |
+| KMS | <ul><li>Key</li></ul> |
