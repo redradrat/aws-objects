@@ -96,7 +96,7 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	}
 
 	if restore {
-		// If create mode is restore, but RestorationDisabled is false, we need to throw an error here
+		// If create mode is restore, but RestorationDisabled is true, we need to throw an error here
 		if assertedSpec.RestorationDisabled {
 			return nil, RestorationDisabledError{Message: fmt.Sprintf("creation without restoration triggered, "+
 				"but key and snapshot exist for RDS Instance '%s'", i.Id().String())}
@@ -127,6 +127,7 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 
 		// So now we should be good to go ahead with DB creation
 		input := assertedSpec.CreateDBInstanceInput(i.Id().String())
+		input.KmsKeyId = key.Id().StringPtr()
 		_, err = i.session.CreateDBInstance(&input)
 		if err != nil {
 			return nil, err
@@ -193,6 +194,11 @@ func (i *Instance) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 			return nil, cloudobject.SpecInvalidError{Message: "modifying DBSubnetGroupName is not possible for MultiAZ instances"}
 		}
 	}
+
+	if assertedSpec.Storage.StorageEncrypted != awssdk.BoolValue(oldStatus.StorageEncrypted) {
+		return nil, cloudobject.SpecInvalidError{Message: "modifying Storage Encryption is not possible"}
+	}
+
 
 	input := assertedSpec.ModifyDBInstanceInput(i.Id().String())
 	if _, err := i.session.ModifyDBInstance(&input); err != nil {
@@ -417,7 +423,7 @@ type InstanceSpec struct {
 	// Defines whether the DB will have a public endpoint attached
 	PubliclyAccessible bool
 
-	// Defines whether auto-restore procedures should be used
+	// If true: throws an error when restoration procedure is auto-detected. (Key & Snapshot detected)
 	RestorationDisabled bool
 
 	Storage InstanceStorageSpec
