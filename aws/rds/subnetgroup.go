@@ -56,7 +56,7 @@ func (s *SubnetGroup) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secr
 	}
 
 	// Now let's go for it... create this SubnetGroup!
-	input := assertedSpec.CreateDBSubnetGroupInput(s.Id().String())
+	input := assertedSpec.CreateDBSubnetGroupInput(s.ID().String())
 	_, err = s.session.CreateDBSubnetGroup(&input)
 	if err != nil {
 		return nil, err
@@ -73,23 +73,23 @@ func (s *SubnetGroup) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secr
 func (s *SubnetGroup) Read() error {
 	// Call AWS to describe our DB SubnetGroup
 	out, err := s.session.DescribeDBSubnetGroups(&awsrds.DescribeDBSubnetGroupsInput{
-		DBSubnetGroupName: s.Id().StringPtr(),
+		DBSubnetGroupName: s.ID().StringPtr(),
 	})
 	if err != nil {
 		if err.(awserr.Error).Code() == awsrds.ErrCodeDBSubnetGroupNotFoundFault {
 			return cloudobject.NotExistsError{Message: fmt.Sprintf("RDS DB SubnetGroup with id '%s' not found",
-				s.Id().String())}
+				s.ID().String())}
 		}
 		return err
 	}
 	// If our output DB list is 0, we didn't find any matches -> not exists
 	if len(out.DBSubnetGroups) == 0 {
 		return cloudobject.NotExistsError{Message: fmt.Sprintf("RDS DB SubnetGroup with id '%s' not found",
-			s.Id().String())}
+			s.ID().String())}
 	}
 	if len(out.DBSubnetGroups) < 1 {
 		return cloudobject.AmbiguousIdentifierError{Message: fmt.Sprintf(
-			"multiple RDS DB SubnetGroups with id '%s' found", s.Id().String())}
+			"multiple RDS DB SubnetGroups with id '%s' found", s.ID().String())}
 	}
 	s.status = (*SubnetGroupStatus)(out.DBSubnetGroups[0])
 
@@ -111,7 +111,7 @@ func (s *SubnetGroup) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secr
 	_ = s.status
 
 	// Now let's go for it... Modify the actual DB SubnetGroup
-	input := assertedSpec.ModifyDBSubnetGroupInput(s.Id().String())
+	input := assertedSpec.ModifyDBSubnetGroupInput(s.ID().String())
 	_, err := s.session.ModifyDBSubnetGroup(&input)
 	if err != nil {
 		return nil, err
@@ -120,8 +120,8 @@ func (s *SubnetGroup) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secr
 	return nil, nil
 }
 
-// Gets rid of the SubnetGroup
-func (s *SubnetGroup) Delete(purge bool) error {
+// Delete deletes the SubnetGroup. Purge has no effect, subnet group will always be purged.
+func (s *SubnetGroup) Delete(_ bool) error {
 	// First, let's check whether our SubnetGroup actually exists
 	exists, err := s.Exists()
 	if err != nil {
@@ -134,7 +134,7 @@ func (s *SubnetGroup) Delete(purge bool) error {
 	}
 
 	input := awsrds.DeleteDBSubnetGroupInput{
-		DBSubnetGroupName: s.Id().StringPtr(),
+		DBSubnetGroupName: s.ID().StringPtr(),
 	}
 	// Now let's go for it... delete that naughty SubnetGroup!! (kill it with fire, pwetty please)
 	if _, err := s.session.DeleteDBSubnetGroup(&input); cloudobject.IgnoreNotExistsError(err) != nil {
@@ -149,8 +149,8 @@ func (s *SubnetGroup) Exists() (bool, error) {
 	return cloudobject.Exists(s)
 }
 
-func (s *SubnetGroup) Id() cloudobject.Id {
-	return cloudobject.Id(aws.CloudObjectResource(DBSubnetGroupTopic, s.name))
+func (s *SubnetGroup) ID() cloudobject.ID {
+	return cloudobject.ID(aws.CloudObjectResource(DBSubnetGroupTopic, s.name))
 }
 
 func (s *SubnetGroup) Status() cloudobject.Status {
@@ -202,6 +202,14 @@ func (spec *SubnetGroupSpec) ModifyDBSubnetGroupInput(id string) awsrds.ModifyDB
 ///////////////
 
 type SubnetGroupStatus awsrds.DBSubnetGroup
+
+func (status *SubnetGroupStatus) ProviderID() cloudobject.ProviderID {
+	out := awsrds.DBSubnetGroup(*status)
+	return cloudobject.ProviderID{
+		Type:  cloudobject.AWSProvider,
+		Value: awssdk.StringValue(out.DBSubnetGroupArn),
+	}
+}
 
 func (status *SubnetGroupStatus) String() string {
 	return awsrds.DBSubnetGroup(*status).String()

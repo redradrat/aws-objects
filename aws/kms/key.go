@@ -63,7 +63,7 @@ func (k *Key) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, err
 	}
 
 	// We specifically need to assign an alias to this key!
-	aliasInput := assertedSpec.CreateAliasInput(k.Id().String(), *out.KeyMetadata.KeyId)
+	aliasInput := assertedSpec.CreateAliasInput(k.ID().String(), *out.KeyMetadata.KeyId)
 	_, err = k.session.CreateAlias(&aliasInput)
 	if err != nil {
 		return nil, err
@@ -80,12 +80,12 @@ func (k *Key) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, err
 func (k *Key) Read() error {
 	// Call AWS to describe our KMS Key
 	out, err := k.session.DescribeKey(&awskms.DescribeKeyInput{
-		KeyId: k.Id().StringPtr(),
+		KeyId: k.ID().StringPtr(),
 	})
 	if err != nil {
 		if err.(awserr.Error).Code() == awskms.ErrCodeNotFoundException {
 			return cloudobject.NotExistsError{Message: fmt.Sprintf("KMS Key with id '%s' not found",
-				k.Id().String())}
+				k.ID().String())}
 		}
 		return err
 	}
@@ -112,6 +112,8 @@ func (k *Key) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, err
 	return nil, nil
 }
 
+// Delete deletes a key.
+// Use cloudobject.PurgeDeleteOpts as input.
 func (k *Key) Delete(purge bool) error {
 	// First, let's check whether our KMS Key actually exists
 	exists, err := k.Exists()
@@ -146,7 +148,7 @@ func (k *Key) Delete(purge bool) error {
 
 	// Secondly we delete the alias, so we're free to "create" that key again
 	aliasInput := awskms.DeleteAliasInput{
-		AliasName: k.Id().StringPtr(),
+		AliasName: k.ID().StringPtr(),
 	}
 	if _, err := k.session.DeleteAlias(&aliasInput); cloudobject.IgnoreNotExistsError(err) != nil {
 		return err
@@ -159,8 +161,8 @@ func (k *Key) Status() cloudobject.Status {
 	return k.status
 }
 
-func (k *Key) Id() cloudobject.Id {
-	return cloudobject.Id(fmt.Sprintf("%s/%s", "alias", aws.CloudObjectResource(KMSKeyTopic, k.name)))
+func (k *Key) ID() cloudobject.ID {
+	return cloudobject.ID(fmt.Sprintf("%s/%s", "alias", aws.CloudObjectResource(KMSKeyTopic, k.name)))
 }
 
 func (k *Key) Exists() (bool, error) {
@@ -182,6 +184,14 @@ func (secrets *KeySecrets) Map() map[string]string {
 //////////////
 
 type KeyStatus awskms.KeyMetadata
+
+func (status *KeyStatus) ProviderID() cloudobject.ProviderID {
+	out := awskms.KeyMetadata(*status).Arn
+	return cloudobject.ProviderID{
+		Type:  cloudobject.AWSProvider,
+		Value: awssdk.StringValue(out),
+	}
+}
 
 func (status *KeyStatus) String() string {
 	out := awskms.KeyMetadata(*status).String()

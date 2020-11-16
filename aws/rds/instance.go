@@ -45,8 +45,8 @@ func NewInstance(name string, session client.ConfigProvider) (*Instance, error) 
 }
 
 // Get the CloudObjectId for our Instance. Equals to Instance Name. This is not the AWS Id.
-func (i *Instance) Id() cloudobject.Id {
-	return cloudobject.Id(aws.CloudObjectResource(DBInstanceTopic, i.name))
+func (i *Instance) ID() cloudobject.ID {
+	return cloudobject.ID(aws.CloudObjectResource(DBInstanceTopic, i.name))
 }
 
 // Create our RDS Instance for realsies
@@ -99,10 +99,10 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 		// If create mode is restore, but RestorationDisabled is true, we need to throw an error here
 		if assertedSpec.RestorationDisabled {
 			return nil, RestorationDisabledError{Message: fmt.Sprintf("creation without restoration triggered, "+
-				"but key and snapshot exist for RDS Instance '%s'", i.Id().String())}
+				"but key and snapshot exist for RDS Instance '%s'", i.ID().String())}
 		}
 		// As we found our preexisting key and snapshot, we just assume we need to restore our stuff
-		input := assertedSpec.RestoreDBInstanceFromDBSnapshotInput(i.Id().String(), finalDBSnapshotName(i))
+		input := assertedSpec.RestoreDBInstanceFromDBSnapshotInput(i.ID().String(), finalDBSnapshotName(i))
 		_, err := i.session.RestoreDBInstanceFromDBSnapshot(&input)
 		if err != nil {
 			return nil, err
@@ -126,8 +126,8 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 		}
 
 		// So now we should be good to go ahead with DB creation
-		input := assertedSpec.CreateDBInstanceInput(i.Id().String())
-		input.KmsKeyId = key.Id().StringPtr()
+		input := assertedSpec.CreateDBInstanceInput(i.ID().String())
+		input.KmsKeyId = key.ID().StringPtr()
 		_, err = i.session.CreateDBInstance(&input)
 		if err != nil {
 			return nil, err
@@ -138,6 +138,8 @@ func (i *Instance) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	if err = i.Read(); err != nil {
 		return nil, err
 	}
+
+	// TODO: create instance secrets
 
 	return nil, nil
 }
@@ -157,21 +159,21 @@ func kmsKeySession(i *Instance) (*kms.Key, error) {
 func (i *Instance) Read() error {
 	// Call AWS to describe our DB Instance
 	out, err := i.session.DescribeDBInstances(&awsrds.DescribeDBInstancesInput{
-		DBInstanceIdentifier: i.Id().StringPtr(),
+		DBInstanceIdentifier: i.ID().StringPtr(),
 	})
 	if err != nil {
 		if err.(awserr.Error).Code() == awsrds.ErrCodeDBInstanceNotFoundFault {
-			return cloudobject.NotExistsError{Message: fmt.Sprintf("RDS DB Instance with id '%s' not found", i.Id().String())}
+			return cloudobject.NotExistsError{Message: fmt.Sprintf("RDS DB Instance with id '%s' not found", i.ID().String())}
 		}
 		return err
 	}
 	// If our output DB list is 0, we didn't find any matches -> not exists
 	if len(out.DBInstances) == 0 {
-		return cloudobject.NotExistsError{Message: fmt.Sprintf("RDS DB Instance with id '%s' not found", i.Id().String())}
+		return cloudobject.NotExistsError{Message: fmt.Sprintf("RDS DB Instance with id '%s' not found", i.ID().String())}
 	}
 	if len(out.DBInstances) < 1 {
 		return cloudobject.AmbiguousIdentifierError{Message: fmt.Sprintf(
-			"multiple RDS DB Instance with id '%s' found", i.Id().String())}
+			"multiple RDS DB Instance with id '%s' found", i.ID().String())}
 	}
 	i.status = (*InstanceStatus)(out.DBInstances[0])
 
@@ -200,13 +202,17 @@ func (i *Instance) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 	}
 
 
-	input := assertedSpec.ModifyDBInstanceInput(i.Id().String())
+	input := assertedSpec.ModifyDBInstanceInput(i.ID().String())
 	if _, err := i.session.ModifyDBInstance(&input); err != nil {
 		return nil, err
 	}
+
+	// TODO: create instance secrets
+
 	return nil, nil
 }
 
+// Delete deletes an Instance.
 func (i *Instance) Delete(purge bool) error {
 	exists, err := i.Exists()
 	if err != nil {
@@ -214,7 +220,7 @@ func (i *Instance) Delete(purge bool) error {
 	}
 	if !exists {
 		return cloudobject.NotExistsError{Message: fmt.Sprintf("cannot delete non-existing RDS instance '%s'",
-			i.Id().String())}
+			i.ID().String())}
 	}
 
 	// If status is already in 'deleting' then we can stop here
@@ -225,7 +231,7 @@ func (i *Instance) Delete(purge bool) error {
 	// If status is not available, we shouldn't continue... we should only delete instances that are ready
 	if *i.status.DBInstanceStatus != "available" {
 		return cloudobject.NotReadyError{Message: fmt.Sprintf("cannot delete not-available RDS instance '%s'",
-			i.Id().String())}
+			i.ID().String())}
 	}
 
 	snapExists, err := snapshotExists(i)
@@ -252,7 +258,7 @@ func (i *Instance) Delete(purge bool) error {
 	}
 
 	input := awsrds.DeleteDBInstanceInput{
-		DBInstanceIdentifier:      i.Id().StringPtr(),
+		DBInstanceIdentifier:      i.ID().StringPtr(),
 		DeleteAutomatedBackups:    awssdk.Bool(deletebackups),
 		FinalDBSnapshotIdentifier: awssdk.String(finalDBSnapshotName(i)),
 		SkipFinalSnapshot:         awssdk.Bool(skipfinalsnapshot),
@@ -260,7 +266,7 @@ func (i *Instance) Delete(purge bool) error {
 	// Let's do this... Let's actually delete the DB instance
 	if _, err := i.session.ModifyDBInstance(&awsrds.ModifyDBInstanceInput{
 		DeletionProtection:   awssdk.Bool(false),
-		DBInstanceIdentifier: i.Id().StringPtr(),
+		DBInstanceIdentifier: i.ID().StringPtr(),
 	}); err != nil {
 		return err
 	}
@@ -576,6 +582,13 @@ func (status *InstanceStatus) String() string {
 	return awsrds.DBInstance(*status).String()
 }
 
+func (status *InstanceStatus) ProviderID() cloudobject.ProviderID {
+	return cloudobject.ProviderID{
+		Type: cloudobject.AWSProvider,
+		Value: *status.DBInstanceArn,
+	}
+}
+
 type InstanceSecrets struct {
 }
 
@@ -605,7 +618,7 @@ func snapshotExists(i *Instance) (bool, error) {
 	// If our output DB list is greater than 1, we have an issue with our backup detector
 	if len(out.DBSnapshots) < 1 {
 		return false, cloudobject.AmbiguousIdentifierError{Message: fmt.Sprintf(
-			"multiple RDS DB Instance with id '%s' found", i.Id().String())}
+			"multiple RDS DB Instance with id '%s' found", i.ID().String())}
 	}
 	// If our output DB list is 0, we didn't find our snapshot
 	if len(out.DBSnapshots) == 0 {

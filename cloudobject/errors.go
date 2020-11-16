@@ -105,6 +105,27 @@ func IgnoreCloudSpecInvalidError(err error) error {
 	return err
 }
 
+// OptsInvalidError is returned when a an options object (e.g. DeleteOpts) is invalid for the current action
+type OptsInvalidError struct {
+	Message string
+}
+
+func (e OptsInvalidError) Error() string {
+	return e.Message
+}
+
+func IsOptsInvalidError(err error) bool {
+	_, ok := err.(OptsInvalidError)
+	return ok
+}
+
+func IgnoreOptsInvalidError(err error) error {
+	if IsOptsInvalidError(err) {
+		return nil
+	}
+	return err
+}
+
 // IdCollisionError is returned when a CloudObject cannot be created due to collisions with existing objects
 type IdCollisionError struct {
 	Message string
