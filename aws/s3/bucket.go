@@ -60,10 +60,7 @@ func (b *Bucket) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, 
 	if err != nil {
 		return nil, err
 	}
-	keyFound, err = key.Exists()
-	if err != nil {
-		return nil, err
-	}
+	keyFound, _ = key.Exists()
 
 	// It's fair to assume, that we get an S3 BucketSpec here.
 	assertedSpec, ok := spec.(*BucketSpec)
@@ -73,10 +70,7 @@ func (b *Bucket) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, 
 	}
 
 	// If the S3 Bucket already exists, we're done here... you're trying to play us for a fool!
-	exists, err := b.Exists()
-	if err != nil && !aws.IsNotExistsError(err) {
-		return nil, err
-	}
+	exists, _ := b.Exists()
 	if !exists {
 		// So now we should be good to go ahead with Bucket creation
 		input := assertedSpec.CreateBucketInput(b.ID().String())
