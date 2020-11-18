@@ -2,7 +2,8 @@ package s3
 
 import (
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/s3"
+	awss3 "github.com/aws/aws-sdk-go/service/s3"
+	"github.com/redradrat/cloud-objects/aws/kms"
 	"github.com/redradrat/cloud-objects/cloudobject"
 	"reflect"
 	"testing"
@@ -44,7 +45,7 @@ func TestBucketSpec_CreateBucketInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   s3.CreateBucketInput
+		want   awss3.CreateBucketInput
 	}{
 		// TODO: Add test cases.
 	}
@@ -87,7 +88,7 @@ func TestBucketSpec_PutBucketAccelerationInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   s3.PutBucketAccelerateConfigurationInput
+		want   awss3.PutBucketAccelerateConfigurationInput
 	}{
 		// TODO: Add test cases.
 	}
@@ -130,7 +131,7 @@ func TestBucketSpec_PutBucketAclInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   s3.PutBucketAclInput
+		want   awss3.PutBucketAclInput
 	}{
 		// TODO: Add test cases.
 	}
@@ -174,7 +175,7 @@ func TestBucketSpec_PutBucketEncryptionInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   s3.PutBucketEncryptionInput
+		want   awss3.PutBucketEncryptionInput
 	}{
 		// TODO: Add test cases.
 	}
@@ -217,7 +218,7 @@ func TestBucketSpec_PutBucketVersioningInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   s3.PutBucketVersioningInput
+		want   awss3.PutBucketVersioningInput
 	}{
 		// TODO: Add test cases.
 	}
@@ -260,7 +261,7 @@ func TestBucketSpec_PutPublicAccessBlockInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   s3.PutPublicAccessBlockInput
+		want   awss3.PutPublicAccessBlockInput
 	}{
 		// TODO: Add test cases.
 	}
@@ -331,7 +332,7 @@ func TestBucketSpec_Valid(t *testing.T) {
 
 func TestBucketStatus_ProviderID(t *testing.T) {
 	type fields struct {
-		Bucket    s3.Bucket
+		Bucket    awss3.Bucket
 		Encrypted bool
 		ARN       string
 	}
@@ -358,7 +359,7 @@ func TestBucketStatus_ProviderID(t *testing.T) {
 
 func TestBucketStatus_String(t *testing.T) {
 	type fields struct {
-		Bucket    s3.Bucket
+		Bucket    awss3.Bucket
 		Encrypted bool
 		ARN       string
 	}
