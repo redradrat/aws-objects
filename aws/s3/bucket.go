@@ -74,7 +74,7 @@ func (b *Bucket) Create(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets, 
 
 	// If the S3 Bucket already exists, we're done here... you're trying to play us for a fool!
 	exists, err := b.Exists()
-	if err != nil {
+	if err != nil && !aws.IsNotExistsError(err) {
 		return nil, err
 	}
 	if !exists {
