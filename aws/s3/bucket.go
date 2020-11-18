@@ -311,7 +311,7 @@ type BucketSpec struct {
 	//Grants GrantsSpec
 }
 
-func (b BucketSpec) Valid() (bool, error) {
+func (b *BucketSpec) Valid() (bool, error) {
 	return true, nil
 }
 
