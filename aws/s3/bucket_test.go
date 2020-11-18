@@ -1,8 +1,8 @@
 package s3
 
 import (
-	awss3 "github.com/aws/aws-sdk-go/service/s3"
-	"github.com/redradrat/cloud-objects/aws/kms"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/redradrat/cloud-objects/cloudobject"
 	"reflect"
 	"testing"
@@ -27,11 +27,15 @@ func TestBucketSecrets_Map(t *testing.T) {
 
 func TestBucketSpec_CreateBucketInput(t *testing.T) {
 	type fields struct {
-		Location             string
-		ACL                  string
-		ObjectLock           bool
-		Versioning           bool
-		TransferAcceleration bool
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
 	}
 	type args struct {
 		id string
@@ -40,18 +44,22 @@ func TestBucketSpec_CreateBucketInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   awss3.CreateBucketInput
+		want   s3.CreateBucketInput
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := BucketSpec{
-				Location:             tt.fields.Location,
-				ACL:                  tt.fields.ACL,
-				ObjectLock:           tt.fields.ObjectLock,
-				Versioning:           tt.fields.Versioning,
-				TransferAcceleration: tt.fields.TransferAcceleration,
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
 			}
 			if got := b.CreateBucketInput(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CreateBucketInput() = %v, want %v", got, tt.want)
@@ -62,11 +70,15 @@ func TestBucketSpec_CreateBucketInput(t *testing.T) {
 
 func TestBucketSpec_PutBucketAccelerationInput(t *testing.T) {
 	type fields struct {
-		Location             string
-		ACL                  string
-		ObjectLock           bool
-		Versioning           bool
-		TransferAcceleration bool
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
 	}
 	type args struct {
 		id string
@@ -75,18 +87,22 @@ func TestBucketSpec_PutBucketAccelerationInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   awss3.PutBucketAccelerateConfigurationInput
+		want   s3.PutBucketAccelerateConfigurationInput
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := BucketSpec{
-				Location:             tt.fields.Location,
-				ACL:                  tt.fields.ACL,
-				ObjectLock:           tt.fields.ObjectLock,
-				Versioning:           tt.fields.Versioning,
-				TransferAcceleration: tt.fields.TransferAcceleration,
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
 			}
 			if got := b.PutBucketAccelerationInput(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PutBucketAccelerationInput() = %v, want %v", got, tt.want)
@@ -97,11 +113,15 @@ func TestBucketSpec_PutBucketAccelerationInput(t *testing.T) {
 
 func TestBucketSpec_PutBucketAclInput(t *testing.T) {
 	type fields struct {
-		Location             string
-		ACL                  string
-		ObjectLock           bool
-		Versioning           bool
-		TransferAcceleration bool
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
 	}
 	type args struct {
 		id string
@@ -110,18 +130,22 @@ func TestBucketSpec_PutBucketAclInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   awss3.PutBucketAclInput
+		want   s3.PutBucketAclInput
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := BucketSpec{
-				Location:             tt.fields.Location,
-				ACL:                  tt.fields.ACL,
-				ObjectLock:           tt.fields.ObjectLock,
-				Versioning:           tt.fields.Versioning,
-				TransferAcceleration: tt.fields.TransferAcceleration,
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
 			}
 			if got := b.PutBucketAclInput(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PutBucketAclInput() = %v, want %v", got, tt.want)
@@ -132,11 +156,15 @@ func TestBucketSpec_PutBucketAclInput(t *testing.T) {
 
 func TestBucketSpec_PutBucketEncryptionInput(t *testing.T) {
 	type fields struct {
-		Location             string
-		ACL                  string
-		ObjectLock           bool
-		Versioning           bool
-		TransferAcceleration bool
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
 	}
 	type args struct {
 		id  string
@@ -146,18 +174,22 @@ func TestBucketSpec_PutBucketEncryptionInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   awss3.PutBucketEncryptionInput
+		want   s3.PutBucketEncryptionInput
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := BucketSpec{
-				Location:             tt.fields.Location,
-				ACL:                  tt.fields.ACL,
-				ObjectLock:           tt.fields.ObjectLock,
-				Versioning:           tt.fields.Versioning,
-				TransferAcceleration: tt.fields.TransferAcceleration,
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
 			}
 			if got := b.PutBucketEncryptionInput(tt.args.id, tt.args.key); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PutBucketEncryptionInput() = %v, want %v", got, tt.want)
@@ -168,11 +200,15 @@ func TestBucketSpec_PutBucketEncryptionInput(t *testing.T) {
 
 func TestBucketSpec_PutBucketVersioningInput(t *testing.T) {
 	type fields struct {
-		Location             string
-		ACL                  string
-		ObjectLock           bool
-		Versioning           bool
-		TransferAcceleration bool
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
 	}
 	type args struct {
 		id string
@@ -181,18 +217,22 @@ func TestBucketSpec_PutBucketVersioningInput(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   awss3.PutBucketVersioningInput
+		want   s3.PutBucketVersioningInput
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := BucketSpec{
-				Location:             tt.fields.Location,
-				ACL:                  tt.fields.ACL,
-				ObjectLock:           tt.fields.ObjectLock,
-				Versioning:           tt.fields.Versioning,
-				TransferAcceleration: tt.fields.TransferAcceleration,
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
 			}
 			if got := b.PutBucketVersioningInput(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PutBucketVersioningInput() = %v, want %v", got, tt.want)
@@ -201,13 +241,60 @@ func TestBucketSpec_PutBucketVersioningInput(t *testing.T) {
 	}
 }
 
+func TestBucketSpec_PutPublicAccessBlockInput(t *testing.T) {
+	type fields struct {
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
+	}
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   s3.PutPublicAccessBlockInput
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := BucketSpec{
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
+			}
+			if got := b.PutPublicAccessBlockInput(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("PutPublicAccessBlockInput() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBucketSpec_Valid(t *testing.T) {
 	type fields struct {
-		Location             string
-		ACL                  string
-		ObjectLock           bool
-		Versioning           bool
-		TransferAcceleration bool
+		Location              string
+		ACL                   string
+		ObjectLock            bool
+		Versioning            bool
+		TransferAcceleration  bool
+		BlockPublicAcls       bool
+		IgnorePublicAcls      bool
+		BlockPublicPolicy     bool
+		RestrictPublicBuckets bool
 	}
 	tests := []struct {
 		name    string
@@ -220,11 +307,15 @@ func TestBucketSpec_Valid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := BucketSpec{
-				Location:             tt.fields.Location,
-				ACL:                  tt.fields.ACL,
-				ObjectLock:           tt.fields.ObjectLock,
-				Versioning:           tt.fields.Versioning,
-				TransferAcceleration: tt.fields.TransferAcceleration,
+				Location:              tt.fields.Location,
+				ACL:                   tt.fields.ACL,
+				ObjectLock:            tt.fields.ObjectLock,
+				Versioning:            tt.fields.Versioning,
+				TransferAcceleration:  tt.fields.TransferAcceleration,
+				BlockPublicAcls:       tt.fields.BlockPublicAcls,
+				IgnorePublicAcls:      tt.fields.IgnorePublicAcls,
+				BlockPublicPolicy:     tt.fields.BlockPublicPolicy,
+				RestrictPublicBuckets: tt.fields.RestrictPublicBuckets,
 			}
 			got, err := b.Valid()
 			if (err != nil) != tt.wantErr {
@@ -240,9 +331,9 @@ func TestBucketSpec_Valid(t *testing.T) {
 
 func TestBucketStatus_ProviderID(t *testing.T) {
 	type fields struct {
-		Bucket    *awss3.Bucket
-		Encrypted *bool
-		ARN       *string
+		Bucket    s3.Bucket
+		Encrypted bool
+		ARN       string
 	}
 	tests := []struct {
 		name   string
@@ -253,7 +344,7 @@ func TestBucketStatus_ProviderID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			status := &BucketStatus{
+			status := BucketStatus{
 				Bucket:    tt.fields.Bucket,
 				Encrypted: tt.fields.Encrypted,
 				ARN:       tt.fields.ARN,
@@ -267,9 +358,9 @@ func TestBucketStatus_ProviderID(t *testing.T) {
 
 func TestBucketStatus_String(t *testing.T) {
 	type fields struct {
-		Bucket    *awss3.Bucket
-		Encrypted *bool
-		ARN       *string
+		Bucket    s3.Bucket
+		Encrypted bool
+		ARN       string
 	}
 	tests := []struct {
 		name   string
@@ -280,7 +371,7 @@ func TestBucketStatus_String(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			status := &BucketStatus{
+			status := BucketStatus{
 				Bucket:    tt.fields.Bucket,
 				Encrypted: tt.fields.Encrypted,
 				ARN:       tt.fields.ARN,
@@ -295,7 +386,7 @@ func TestBucketStatus_String(t *testing.T) {
 func TestBucket_Create(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	type args struct {
@@ -312,7 +403,7 @@ func TestBucket_Create(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -332,7 +423,7 @@ func TestBucket_Create(t *testing.T) {
 func TestBucket_Delete(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	type args struct {
@@ -348,7 +439,7 @@ func TestBucket_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -363,7 +454,7 @@ func TestBucket_Delete(t *testing.T) {
 func TestBucket_Exists(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	tests := []struct {
@@ -376,7 +467,7 @@ func TestBucket_Exists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -396,7 +487,7 @@ func TestBucket_Exists(t *testing.T) {
 func TestBucket_ID(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	tests := []struct {
@@ -408,7 +499,7 @@ func TestBucket_ID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -423,7 +514,7 @@ func TestBucket_ID(t *testing.T) {
 func TestBucket_Read(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	tests := []struct {
@@ -435,7 +526,7 @@ func TestBucket_Read(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -450,7 +541,7 @@ func TestBucket_Read(t *testing.T) {
 func TestBucket_Status(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	tests := []struct {
@@ -462,7 +553,7 @@ func TestBucket_Status(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -477,7 +568,7 @@ func TestBucket_Status(t *testing.T) {
 func TestBucket_Update(t *testing.T) {
 	type fields struct {
 		name    string
-		status  *BucketStatus
+		status  BucketStatus
 		session *awss3.S3
 	}
 	type args struct {
@@ -494,7 +585,7 @@ func TestBucket_Update(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bucket{
+			b := &Bucket{
 				name:    tt.fields.name,
 				status:  tt.fields.status,
 				session: tt.fields.session,
@@ -511,10 +602,53 @@ func TestBucket_Update(t *testing.T) {
 	}
 }
 
+func TestNewBucket(t *testing.T) {
+	type args struct {
+		name    string
+		session client.ConfigProvider
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *Bucket
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewBucket(tt.args.name, tt.args.session)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewBucket() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewBucket() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSaneS3Bucket(t *testing.T) {
+	tests := []struct {
+		name string
+		want BucketSpec
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SaneS3Bucket(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SaneS3Bucket() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_ensureBucketConfig(t *testing.T) {
 	type args struct {
 		assertedSpec *BucketSpec
-		b            Bucket
+		b            *Bucket
 	}
 	tests := []struct {
 		name    string
@@ -534,7 +668,7 @@ func Test_ensureBucketConfig(t *testing.T) {
 
 func Test_kmsKeySession(t *testing.T) {
 	type args struct {
-		b Bucket
+		b *Bucket
 	}
 	tests := []struct {
 		name    string
