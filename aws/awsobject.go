@@ -3,20 +3,21 @@ package aws
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/iam"
 
 	"github.com/redradrat/cloud-objects/cloudobject"
 )
 
 type Instance interface {
-	Create(session client.ConfigProvider) error
-	Update(session client.ConfigProvider) error
-	Delete(session client.ConfigProvider) error
+	Create(svc iamiface.IAMAPI) error
+	Update(svc iamiface.IAMAPI) error
+	Delete(svc iamiface.IAMAPI) error
 	ARN() awsarn.ARN
-	IsCreated(session client.ConfigProvider) bool
+	IsCreated(svc iamiface.IAMAPI) bool
 }
 
 func IsAlreadyExistsError(err error) bool {
