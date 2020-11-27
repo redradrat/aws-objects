@@ -13,7 +13,7 @@ import (
 	"github.com/redradrat/cloud-objects/aws"
 )
 
-func createRole(svc iamiface.IAMAPI, rn string, roleDesc string, pd PolicyDocument) (*awsiam.CreateRoleOutput, error) {
+func createRole(svc iamiface.IAMAPI, rn string, roleDesc string, sessionDuration int64, pd PolicyDocument) (*awsiam.CreateRoleOutput, error) {
 
 	b, err := json.Marshal(&pd)
 	if err != nil {
@@ -23,6 +23,7 @@ func createRole(svc iamiface.IAMAPI, rn string, roleDesc string, pd PolicyDocume
 	result, err := svc.CreateRole(&awsiam.CreateRoleInput{
 		AssumeRolePolicyDocument: awssdk.String(string(b)),
 		Description:              awssdk.String(roleDesc),
+		MaxSessionDuration:       awssdk.Int64(sessionDuration),
 		RoleName:                 awssdk.String(rn),
 	})
 	if err != nil {
@@ -74,22 +75,24 @@ func getRole(svc iamiface.IAMAPI, roleArn awsarn.ARN) (*awsiam.GetRoleOutput, er
 }
 
 type RoleInstance struct {
-	Name           string
-	Description    string
-	PolicyDocument PolicyDocument
-	arn            awsarn.ARN
+	Name               string
+	Description        string
+	PolicyDocument     PolicyDocument
+	MaxSessionDuration int64
+	arn                awsarn.ARN
 }
 
-func NewRoleInstance(name string, description string, poldoc PolicyDocument) *RoleInstance {
-	return &RoleInstance{Name: name, Description: description, PolicyDocument: poldoc}
+func NewRoleInstance(name string, description string, sessionDuration int64, poldoc PolicyDocument) *RoleInstance {
+	return &RoleInstance{Name: name, Description: description, MaxSessionDuration: sessionDuration, PolicyDocument: poldoc}
 }
 
-func NewExistingRoleInstance(name string, description string, poldoc PolicyDocument, arn awsarn.ARN) *RoleInstance {
+func NewExistingRoleInstance(name string, description string, sessionDuration int64, poldoc PolicyDocument, arn awsarn.ARN) *RoleInstance {
 	return &RoleInstance{
-		Name:           name,
-		Description:    description,
-		PolicyDocument: poldoc,
-		arn:            arn,
+		Name:               name,
+		Description:        description,
+		PolicyDocument:     poldoc,
+		MaxSessionDuration: sessionDuration,
+		arn:                arn,
 	}
 }
 
@@ -127,7 +130,7 @@ func NewExistingRoleInstance(name string, description string, poldoc PolicyDocum
 // Reconcile creates or updates an AWS Role
 func (r *RoleInstance) Create(svc iamiface.IAMAPI) error {
 	var newarn awsarn.ARN
-	out, err := createRole(svc, r.Name, r.Description, r.PolicyDocument)
+	out, err := createRole(svc, r.Name, r.Description, r.MaxSessionDuration, r.PolicyDocument)
 	if err != nil {
 		return err
 	}

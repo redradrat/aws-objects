@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	BucketTopic = "bkt"
+	BucketTopic     = "bkt"
 	ZeroResultsList = "list-buckets returned 0 results"
 )
 
@@ -27,19 +27,21 @@ type Bucket struct {
 type BucketStatus struct {
 	awss3.Bucket
 	Encrypted bool
-	ARN string
+	ARN       string
 }
+
 func (status BucketStatus) String() string {
 	return status.Bucket.String()
 }
 func (status BucketStatus) ProviderID() cloudobject.ProviderID {
 	return cloudobject.ProviderID{
-		Type: cloudobject.AWSProvider,
+		Type:  cloudobject.AWSProvider,
 		Value: status.ARN,
 	}
 }
 
-type BucketSecrets struct {}
+type BucketSecrets struct{}
+
 func (secrets BucketSecrets) Map() map[string]string {
 	out := make(map[string]string)
 	// TODO: Fill map
@@ -294,7 +296,7 @@ type BucketSpec struct {
 	TransferAcceleration bool
 
 	// Acl restrictions
-	BlockPublicAcls bool
+	BlockPublicAcls  bool
 	IgnorePublicAcls bool
 
 	// Policy restrictions
@@ -308,7 +310,6 @@ type BucketSpec struct {
 func (b *BucketSpec) Valid() (bool, error) {
 	return true, nil
 }
-
 
 ///////////////
 /// HELPERS ///
@@ -360,7 +361,7 @@ func (b BucketSpec) PutBucketVersioningInput(id string) awss3.PutBucketVersionin
 	in := awss3.PutBucketVersioningInput{
 		Bucket: awssdk.String(id),
 		VersioningConfiguration: &awss3.VersioningConfiguration{
-			Status:    awssdk.String(status),
+			Status: awssdk.String(status),
 		},
 	}
 	return in

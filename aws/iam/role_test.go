@@ -19,11 +19,12 @@ import (
 ///////////////
 
 const (
-	ReferenceRoleName         = "thisismyrole"
-	ReferenceExistingRoleName = "thisismyexistingrole"
-	ReferenceRoleDescription  = "description"
-	ReferenceRoleId           = "AROA1234567890EXAMPLE"
-	ReferenceRegion           = "eu-west-1"
+	ReferenceRoleName            = "thisismyrole"
+	ReferenceExistingRoleName    = "thisismyexistingrole"
+	ReferenceRoleDescription     = "description"
+	ReferenceRoleSessionDuration = 3600
+	ReferenceRoleId              = "AROA1234567890EXAMPLE"
+	ReferenceRegion              = "eu-west-1"
 )
 
 func (m *mockIAMClient) CreateRole(input *awsiam.CreateRoleInput) (*awsiam.CreateRoleOutput, error) {
@@ -111,12 +112,12 @@ func TestRoleInstance_Create(t *testing.T) {
 	mockSvc := &mockIAMClient{t: t}
 
 	pd := getReferencePolicyDocument()
-	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd)
+	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, pd)
 	err := rolIns.Create(mockSvc)
 	assert.NoError(t, err)
 	assert.True(t, rolIns.IsCreated(mockSvc))
 
-	rolIns = NewRoleInstance(ReferenceExistingRoleName, ReferenceRoleDescription, pd)
+	rolIns = NewRoleInstance(ReferenceExistingRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, pd)
 	err = rolIns.Create(mockSvc)
 	assert.Error(t, err)
 }
@@ -126,14 +127,14 @@ func TestRoleInstance_Update(t *testing.T) {
 	mockSvc := &mockIAMClient{t: t}
 
 	pd := getReferencePolicyDocument()
-	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd)
+	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, pd)
 
 	err := rolIns.Update(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, rolIns.IsCreated(mockSvc))
 
-	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd, getReferenceRoleExistingArn())
+	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, pd, getReferenceRoleExistingArn())
 	err = rolIns.Update(mockSvc)
 	assert.NoError(t, err)
 }
@@ -143,25 +144,25 @@ func TestRoleInstance_Delete(t *testing.T) {
 	mockSvc := &mockIAMClient{t: t}
 
 	pd := getReferencePolicyDocument()
-	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd)
+	rolIns := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, pd)
 
 	err := rolIns.Delete(mockSvc)
 	assert.Error(t, err)
 	assert.True(t, err.(aws.InstanceError).IsOfErrorCode(aws.ErrAWSInstanceNotYetCreated))
 	assert.False(t, rolIns.IsCreated(mockSvc))
 
-	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, pd, getReferenceRoleExistingArn())
+	rolIns = NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, pd, getReferenceRoleExistingArn())
 	err = rolIns.Delete(mockSvc)
 	assert.NoError(t, err)
 }
 
 func TestNewRoleInstance(t *testing.T) {
-	pi := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, getReferencePolicyDocument())
+	pi := NewRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, getReferencePolicyDocument())
 	assert.Equal(t, getReferenceRoleInstance(), pi)
 }
 
 func TestNewExistingRoleInstance(t *testing.T) {
-	ri := NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, getReferencePolicyDocument(), getReferenceRoleExistingArn())
+	ri := NewExistingRoleInstance(ReferenceRoleName, ReferenceRoleDescription, ReferenceRoleSessionDuration, getReferencePolicyDocument(), getReferenceRoleExistingArn())
 	riWithArn := getReferenceRoleInstance()
 	riWithArn.arn = getReferenceRoleExistingArn()
 	assert.Equal(t, riWithArn, ri)
@@ -175,7 +176,7 @@ func TestRoleInstance_createRole(t *testing.T) {
 	// Setup Test
 	mockSvc := &mockIAMClient{t: t}
 
-	_, err := createRole(mockSvc, "test/name", "test", getReferencePolicyDocument())
+	_, err := createRole(mockSvc, "test/name", "test", 3600, getReferencePolicyDocument())
 	assert.Error(t, err)
 }
 
@@ -199,8 +200,9 @@ func getReferenceGetRoleInput() *awsiam.GetRoleInput {
 
 func getReferenceCreateRoleInput() *awsiam.CreateRoleInput {
 	return &awsiam.CreateRoleInput{
-		Description:              awssdk.String(ReferenceRoleDescription),
 		AssumeRolePolicyDocument: awssdk.String(string(getMarshaledReferencePolicyDocument())),
+		Description:              awssdk.String(ReferenceRoleDescription),
+		MaxSessionDuration:       awssdk.Int64(ReferenceRoleSessionDuration),
 		RoleName:                 awssdk.String(ReferenceRoleName),
 	}
 }
@@ -214,8 +216,9 @@ func getReferenceUpdateRoleInput() *awsiam.UpdateRoleInput {
 
 func getReferenceRoleInstance() *RoleInstance {
 	return &RoleInstance{
-		Name:           ReferenceRoleName,
-		Description:    ReferenceRoleDescription,
-		PolicyDocument: getReferencePolicyDocument(),
+		Name:               ReferenceRoleName,
+		Description:        ReferenceRoleDescription,
+		PolicyDocument:     getReferencePolicyDocument(),
+		MaxSessionDuration: ReferenceRoleSessionDuration,
 	}
 }

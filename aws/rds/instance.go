@@ -201,7 +201,6 @@ func (i *Instance) Update(spec cloudobject.CloudObjectSpec) (cloudobject.Secrets
 		return nil, cloudobject.SpecInvalidError{Message: "modifying Storage Encryption is not possible"}
 	}
 
-
 	input := assertedSpec.ModifyDBInstanceInput(i.ID().String())
 	if _, err := i.session.ModifyDBInstance(&input); err != nil {
 		return nil, err
@@ -584,7 +583,7 @@ func (status *InstanceStatus) String() string {
 
 func (status *InstanceStatus) ProviderID() cloudobject.ProviderID {
 	return cloudobject.ProviderID{
-		Type: cloudobject.AWSProvider,
+		Type:  cloudobject.AWSProvider,
 		Value: *status.DBInstanceArn,
 	}
 }

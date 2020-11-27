@@ -29,7 +29,7 @@ type CloudObjectSpec interface {
 
 type ProviderType string
 type ProviderID struct {
-	Type ProviderType
+	Type  ProviderType
 	Value string
 }
 
