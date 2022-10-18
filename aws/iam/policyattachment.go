@@ -136,7 +136,7 @@ func NewPolicyAttachmentInstance(policyRef awsarn.ARN, attType AttachmentType, r
 	return &PolicyAttachmentInstance{PolicyRef: policyRef, TargetRef: ref, Type: attType}
 }
 
-//  Create attaches the referenced policy on referenced target type
+// Create attaches the referenced policy on referenced target type
 func (pa *PolicyAttachmentInstance) Create(svc iamiface.IAMAPI) error {
 	if err := createPolicyAttachment(svc, pa.Type, pa.PolicyRef, pa.TargetRef); err != nil {
 		return err

@@ -161,7 +161,7 @@ func NewExistingPolicyInstance(name, description string, policyDoc PolicyDocumen
 //	}
 //}
 
-//  Create attaches the referenced policy on referenced target type and returns the target ARN
+// Create attaches the referenced policy on referenced target type and returns the target ARN
 func (p *PolicyInstance) Create(svc iamiface.IAMAPI) error {
 	var newarn awsarn.ARN
 	out, err := createPolicy(svc, p.Name, p.Description, p.PolicyDocument)

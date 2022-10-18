@@ -23,12 +23,12 @@ func FriendlyNamefromARN(arn awsarn.ARN) string {
 }
 
 type StatementEntry struct {
-	Sid       string                       `json:"Sid,omitempty"`
-	Effect    string                       `json:"Effect,omitempty"`
-	Principal map[string]string            `json:"Principal,omitempty"`
-	Action    []string                     `json:"Action,omitempty"`
-	Resource  []string                     `json:"Resource,omitempty"`
-	Condition map[string]map[string]string `json:"Condition,omitempty"`
+	Sid       string                         `json:"Sid,omitempty"`
+	Effect    string                         `json:"Effect,omitempty"`
+	Principal map[string]string              `json:"Principal,omitempty"`
+	Action    []string                       `json:"Action,omitempty"`
+	Resource  []string                       `json:"Resource,omitempty"`
+	Condition map[string]map[string][]string `json:"Condition,omitempty"`
 }
 
 func Client(session client.ConfigProvider) *iam.IAM {
